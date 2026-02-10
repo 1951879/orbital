@@ -89,9 +89,9 @@ export const ChaseCamera: React.FC<ChaseCameraProps> = ({ sim, cameraRef }) => {
             );
         }
 
-        if (Math.random() < 0.01) {
-            console.log(`[ChaseCam] P${sim.playerId} Pos: ${activeCam.position.toArray().map(n => n.toFixed(1))} | Sim: ${pos.toArray().map(n => n.toFixed(1))}`);
-        }
+        // if (Math.random() < 0.01) {
+        //     console.log(`[ChaseCam] P${sim.playerId} Pos: ${activeCam.position.toArray().map(n => n.toFixed(1))} | Sim: ${pos.toArray().map(n => n.toFixed(1))}`);
+        // }
         lastPosRef.current.copy(activeCam.position);
     });
 

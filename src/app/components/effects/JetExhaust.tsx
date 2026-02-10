@@ -9,27 +9,34 @@ interface JetExhaustProps {
   scale?: number; // visual scale factor
   opacity?: number;
   length?: number;
-  throttle?: number; // 0 to 1
+  throttle?: number; // 0 to 1 (Static/Fallback)
+  throttleRef?: React.MutableRefObject<number>; // Dynamic 60fps Source
 }
 
-export const JetExhaust: React.FC<JetExhaustProps> = ({ 
-  color = "#ffaa00", 
-  scale = 1.0, 
+export const JetExhaust: React.FC<JetExhaustProps> = ({
+  color = "#ffaa00",
+  scale = 1.0,
   opacity = 0.8,
   length = 3.0,
-  throttle = 0.5
+  throttle = 0.5,
+  throttleRef
 }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const lightRef = useRef<THREE.PointLight>(null);
-  
-  // Keep a ref to throttle for the render loop to avoid closure staleness if not re-rendering whole tree
-  // though in this setup the parent re-renders on throttle change anyway.
-  const throttleRef = useRef(throttle);
-  useEffect(() => { throttleRef.current = throttle; }, [throttle]);
-  
+
+  // Internal ref fallback if no external ref provided
+  const localThrottleRef = useRef(throttle);
+
+  // If external ref is provided, use it. Otherwise use local sync.
+  const activeThrottleRef = throttleRef || localThrottleRef;
+
+  useEffect(() => {
+    if (!throttleRef) localThrottleRef.current = throttle;
+  }, [throttle, throttleRef]);
+
   const geometry = useMemo(() => {
     const geo = new THREE.CylinderGeometry(0.0, 0.25, length, 16, 4, true);
-    geo.translate(0, length / 2, 0); 
+    geo.translate(0, length / 2, 0);
     return geo;
   }, [length]);
 
@@ -85,13 +92,13 @@ export const JetExhaust: React.FC<JetExhaustProps> = ({
 
   useFrame((state) => {
     const time = state.clock.elapsedTime;
-    const currentThrottle = throttleRef.current;
+    const currentThrottle = activeThrottleRef.current;
     const flicker = 1.0 + Math.sin(time * 60.0) * 0.05 * currentThrottle;
 
     if (meshRef.current) {
-        meshRef.current.scale.set(scale * (0.8 + 0.4 * currentThrottle), scale * flicker, scale * (0.8 + 0.4 * currentThrottle));
-        (meshRef.current.material as THREE.ShaderMaterial).uniforms.uTime.value = time;
-        (meshRef.current.material as THREE.ShaderMaterial).uniforms.uThrottle.value = currentThrottle;
+      meshRef.current.scale.set(scale * (0.8 + 0.4 * currentThrottle), scale * flicker, scale * (0.8 + 0.4 * currentThrottle));
+      (meshRef.current.material as THREE.ShaderMaterial).uniforms.uTime.value = time;
+      (meshRef.current.material as THREE.ShaderMaterial).uniforms.uThrottle.value = currentThrottle;
     }
 
     if (lightRef.current) {
@@ -104,23 +111,23 @@ export const JetExhaust: React.FC<JetExhaustProps> = ({
   });
 
   return (
-    <group> 
-       {/* The Volumetric Flame */}
-       <mesh 
-         ref={meshRef} 
-         geometry={geometry} 
-         rotation={[-Math.PI / 2, 0, 0]}
-       > 
-         <primitive object={shaderMaterial} attach="material" />
-       </mesh>
-       
-       {/* Point Light emitting into the scene */}
-       <pointLight 
-         ref={lightRef}
-         color={color}
-         decay={1.5}
-         position={[0, 0, -3.0]} // Moved further back to avoid self-illumination
-       />
+    <group>
+      {/* The Volumetric Flame */}
+      <mesh
+        ref={meshRef}
+        geometry={geometry}
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
+        <primitive object={shaderMaterial} attach="material" />
+      </mesh>
+
+      {/* Point Light emitting into the scene */}
+      <pointLight
+        ref={lightRef}
+        color={color}
+        decay={1.5}
+        position={[0, 0, -3.0]} // Moved further back to avoid self-illumination
+      />
     </group>
   );
 };

@@ -30,13 +30,15 @@ export const CameraManager: React.FC<CameraManagerProps> = ({ playerSim, cameraR
 
     // Layer Management (Hide Self Name Tag)
     React.useEffect(() => {
-        if (cameraRef?.current && typeof playerId === 'number') {
+        if (cameraRef?.current) {
             const cam = cameraRef.current;
             cam.layers.enableAll(); // See everything by default
 
-            // Hide own name tag (Layer = ID + 1)
-            // Layers 1, 2, 3, 4 are for P1, P2, P3, P4 tags respectively.
-            cam.layers.disable(playerId + 1);
+            if (typeof playerId === 'number') {
+                // Hide own name tag (Layer = ID + 1)
+                // Layers 1, 2, 3, 4 are for P1, P2, P3, P4 tags respectively.
+                cam.layers.disable(playerId + 1);
+            }
         }
     }, [cameraRef, playerId]);
 

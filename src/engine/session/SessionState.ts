@@ -4,18 +4,12 @@ import { DeviceID, DeviceManager } from '../input/DeviceManager';
 import { InputMapper, InputContext } from '../input/InputMapper';
 import { GAMEPAD_FLIGHT, GAMEPAD_MENU, KEYBOARD_FLIGHT, KEYBOARD_MENU } from '../input/definitions/DefaultProfiles';
 
-export interface ViewportRect {
-    x: number; // 0-1
-    y: number; // 0-1
-    w: number; // 0-1
-    h: number; // 0-1
-}
+
 
 export interface EnginePlayer {
     id: number;           // 0-3
     deviceId: DeviceID;
     input: InputMapper;
-    viewport: ViewportRect;
     isConnected: boolean; // False if device disconnects
 }
 
@@ -151,7 +145,6 @@ export class SessionState {
             id,
             deviceId,
             input: mapper,
-            viewport: { x: 0, y: 0, w: 1, h: 1 },
             isConnected: true
         };
 
@@ -159,17 +152,14 @@ export class SessionState {
         player.input.setContext(this._currentContext);
 
         this._players.set(id, player);
-        this.recalculateViewports();
         this.syncStore();
 
         console.log(`[Session] Player ${id} joined with ${deviceId}. Total: ${this._players.size}`);
-        this.recalculateViewports();
         return player;
     }
 
     public static removePlayer(id: number) {
         if (this._players.delete(id)) {
-            this.recalculateViewports();
             this.syncStore();
             console.log(`[Session] Player ${id} left`);
         }
@@ -207,32 +197,7 @@ export class SessionState {
         }
     };
 
-    private static recalculateViewports() {
-        const players = Array.from(this._players.values()).sort((a, b) => a.id - b.id);
-        const count = players.length;
-        const mode = useSessionStore.getState().splitMode;
 
-        players.forEach((p, index) => {
-            if (count === 1) {
-                p.viewport = { x: 0, y: 0, w: 1, h: 1 };
-            } else if (count === 2) {
-                if (mode === 'horizontal') {
-                    // Top / Bottom
-                    p.viewport = { x: 0, y: index === 0 ? 0.5 : 0, w: 1, h: 0.5 };
-                } else {
-                    // Left / Right
-                    p.viewport = { x: index === 0 ? 0 : 0.5, y: 0, w: 0.5, h: 1 };
-                }
-            } else {
-                // 3 or 4 -> Grid
-                // 0: Top Left, 1: Top Right, 2: Bot Left, 3: Bot Right
-                const row = index < 2 ? 1 : 0; // Top row is y=0.5
-                const col = index % 2;         // Left is x=0
-                p.viewport = { x: col * 0.5, y: row * 0.5, w: 0.5, h: 0.5 };
-            }
-            console.log(`[Session] Recalc P${p.id} Viewport:`, p.viewport);
-        });
-    }
 
     private static syncStore() {
         useSessionStore.setState({

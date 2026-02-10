@@ -22,6 +22,7 @@ export const TelemetryBridge: React.FC<{ sim: AirplaneSim; playerId: number }> =
             // 1. Sync Telemetry
             pilot.telemetry.speed = sim.currentSpeed;
             pilot.telemetry.throttle = sim.throttle;
+            pilot.throttle = sim.throttle; // Update top-level prop for React components
 
             // Calculate altitude above planet surface (for spherical terrain)
             const terrainParams = storeState.terrainParams;

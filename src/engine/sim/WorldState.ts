@@ -21,6 +21,13 @@ export class WorldState {
         this._airplanes.push(sim);
     }
 
+    public static unregisterAirplane(sim: any) {
+        const index = this._airplanes.indexOf(sim);
+        if (index > -1) {
+            this._airplanes.splice(index, 1);
+        }
+    }
+
     public static createEntity(startPos: { x: number, y: number, z: number }): Entity {
         const id = this._nextId++;
         const entity: Entity = {

@@ -16,12 +16,15 @@ import { CameraManager } from './CameraManager';
 import { LobbySquadron } from './LobbySquadron';
 import { SessionBridge } from '../../app/components/SessionBridge';
 import { SessionState } from '../session/SessionState';
-import { ScissorViewportSystem } from './ViewportSystem';
+import { HTMLStencilViewportSystem } from './viewport/HTMLStencilViewportSystem.tsx';
 import { useStore } from '../../app/store/useStore';
 import { ArchitectureOverlay } from '../../app/components/ui/debug/ArchitectureOverlay';
 
+import { ViewportStencilLayout } from './viewport/ViewportStencilLayout';
+
 export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     const [ready, setReady] = useState(false);
+    const viewRefs = React.useRef<(HTMLDivElement | null)[]>([]);
 
     // State for managing Sims (Pilot ID -> Sim)
     const [sims, setSims] = useState<Map<number, AirplaneSim>>(new Map());
@@ -57,9 +60,30 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
                     // Create new Sim
                     // Position based on ID to avoid overlap?
                     const offset = pilot.id * 20;
-                    const sim = new AirplaneSim(pilot.id, new Vector3(offset, 100 + offset, 0));
+                    const sim = new AirplaneSim(pilot.id, new Vector3(offset, 100 + offset, 0), pilot.airplane);
                     WorldState.registerAirplane(sim);
                     next.set(pilot.id, sim);
+                } else {
+                    // Check if Plane Type Changed
+                    const existingSim = next.get(pilot.id)!;
+
+                    // Add safety check for pilot.airplane to avoid undefined/default issues
+                    const newType = pilot.airplane || 'interceptor';
+
+                    if (existingSim.type !== newType) {
+                        // Type changed! Replace the Sim.
+                        WorldState.unregisterAirplane(existingSim);
+
+                        // Reset position slightly to ensure clean collision state? 
+                        // Or keep existing position but update type.
+                        const newSim = new AirplaneSim(pilot.id, existingSim.position.clone(), newType);
+                        newSim.quaternion.copy(existingSim.quaternion);
+                        newSim.currentSpeed = existingSim.currentSpeed; // Preserve speed
+                        newSim.throttle = existingSim.throttle; // Preserve throttle
+
+                        WorldState.registerAirplane(newSim);
+                        next.set(pilot.id, newSim);
+                    }
                 }
             });
 
@@ -147,7 +171,7 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
                         ))}
 
                         {/* SPLITSCREEN VIEWPORT SYSTEM */}
-                        <ScissorViewportSystem>
+                        <HTMLStencilViewportSystem viewRefs={viewRefs}>
                             {(player, cameraRef) => {
                                 const sim = sims.get(player.id);
                                 return (
@@ -161,7 +185,7 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
                                     </>
                                 );
                             }}
-                        </ScissorViewportSystem>
+                        </HTMLStencilViewportSystem>
                     </>
                 ) : (
                     <>
@@ -177,6 +201,14 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
 
                 {children}
             </Canvas>
+
+            {/* STENCIL LAYOUT (Outside Canvas for robust DOM layout) */}
+            {isFlying && (
+                <ViewportStencilLayout
+                    playerCount={localParty.length}
+                    onRefsReady={(refs) => { viewRefs.current = refs; }}
+                />
+            )}
 
             <div className="absolute top-4 left-4 z-50 pointer-events-none">
                 <ArchitectureOverlay />

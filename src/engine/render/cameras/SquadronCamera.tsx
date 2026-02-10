@@ -39,6 +39,16 @@ export const SquadronCamera: React.FC<SquadronCameraProps> = ({ cameraRef }) => 
     React.useLayoutEffect(() => {
         // Force clear any offset when entering Squadron Mode
         if ((camera as any).clearViewOffset) (camera as any).clearViewOffset();
+
+        // SANITY CHECK: If camera is impossibly far (gameplay scale), reset it.
+        // This happens if we return from a ChaseCamera that was 10,000 units away.
+        if (camera.position.length() > 5000) {
+            console.warn('[SquadronCamera] Camera found huge distance, resetting to default.');
+            // Use radius + altitude to ensure we are OUTSIDE the planet
+            camera.position.set(0, radius + 200, 200);
+            camera.lookAt(new Vector3(0, 0, 0));
+        }
+
         _desiredPos.current.copy(camera.position);
 
         return () => {
@@ -134,6 +144,7 @@ export const SquadronCamera: React.FC<SquadronCameraProps> = ({ cameraRef }) => 
         // B. Squadron Mode (Has Pilots)
         let squadTarget = orbitTarget;
         let squadPos = orbitPos;
+        let terrainAltitude = 0;
 
         if (squadronAnchor) {
             // Build tangent frame
@@ -147,7 +158,7 @@ export const SquadronCamera: React.FC<SquadronCameraProps> = ({ cameraRef }) => 
             // NOTE: The SimplexNoise is generated in "Local Space" (No Rotation).
             // Since the Planet Mesh is rotated by `terrainRotation`, we must query noise at `Rotate(-Rot, WorldPos)`.
             const h = getTerrainElevation(rotAnchor.x, rotAnchor.y, rotAnchor.z, simplex, terrainParams);
-            const terrainAltitude = Math.max(0, h); // Ensure we don't go below sea level if that logic exists, though h can be negative
+            terrainAltitude = Math.max(0, h); // Ensure we don't go below sea level if that logic exists, though h can be negative
 
             // Dynamic centering based on pilot count
             let centeringY = 0;
@@ -185,7 +196,7 @@ export const SquadronCamera: React.FC<SquadronCameraProps> = ({ cameraRef }) => 
 
         // --- 6. APPLY ---
         if (hasPilots) {
-            // console.log(`[Cam] Anchor: ${squadronAnchor?.toArray()} Target: ${_target.current.toArray()} Pos: ${_desiredPos.current.toArray()} Rot: ${terrainRotation}`);
+            // Debug log removed
         }
 
         camera.position.lerp(_desiredPos.current, delta * 3.0);

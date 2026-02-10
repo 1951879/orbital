@@ -6,7 +6,7 @@ import { AirplaneSim } from './AirplaneSim';
 import { useAirplaneSound } from '../../../hooks/useAirplaneSound';
 import { AIRPLANE_CONFIG } from './AirplaneConfig';
 import { useStore } from '../../store/useStore'; // For mission state (isSeeking)
-import { PilotNameTag } from '../../components/ui/debug/PilotNameTag';
+
 
 /**
  * AirplaneView - Pure Presentation Layer
@@ -27,6 +27,10 @@ export const AirplaneView: React.FC<{ sim: AirplaneSim; playerId: number; visibl
     // The sound hook expects generic React refs to read from every frame
     const speedRef = useRef(0);
     const inputRef = useRef({ x: 0, y: 0 });
+
+    // --- GEOMETRY REFS ---
+    // Direct Ref for 60fps visual updates (Exhaust) logic without re-renders
+    const throttleRef = useRef(0);
 
     // --- LIGHT SETUP ---
     useMemo(() => {
@@ -65,6 +69,7 @@ export const AirplaneView: React.FC<{ sim: AirplaneSim; playerId: number; visibl
 
         // 3. Update Audio/Effect Refs
         speedRef.current = sim.currentSpeed;
+        throttleRef.current = sim.throttle;
 
         // Input Manager global state for sound modulation (pitch bend on G-force)
         // We can read directly from InputManager
@@ -110,12 +115,7 @@ export const AirplaneView: React.FC<{ sim: AirplaneSim; playerId: number; visibl
                     {/* isSeeking && <ScannerCone /> (Legacy Removed) */}
                 </group>
 
-                <AirplaneGeometry type={sim.type} playerId={playerId} />
-                <PilotNameTag
-                    name={useStore.getState().localParty[playerId]?.name || `Ace ${playerId}`}
-                    playerId={playerId}
-                    color={useStore.getState().localParty[playerId]?.color || '#ffffff'}
-                />
+                <AirplaneGeometry type={sim.type} playerId={playerId} throttleRef={throttleRef} />
             </group>
         </group>
     );

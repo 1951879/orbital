@@ -8,25 +8,25 @@ The Engine knows *who* is playing and *how* they are controlling it. The App kno
 
 ### Layer 1: The Engine Session (SessionState)
 **Role:** The Couch.
-**Responsibility:** Manages generic "Players" and their resources (Inputs, Viewports).
+**Responsibility:** Manages generic "Players" and their resources (Inputs).
 **Components:**
 *   `SessionState`: The central store for the physical session.
 *   **Concepts:**
     *   `EnginePlayer`: A human slot (ID 0-3).
     *   `InputAssignment`: Links a `DeviceID` to this Player.
-    *   `ViewportConfig`: Defines where this player draws on screen (Rect).
-**Rule:** Completely GAME-AGNOSTIC. It doesn't know what a "Pilot" or "Airplane" is.
+**Rule:** Completely GAME-AGNOSTIC. It doesn't know what a "Pilot" or "Airplane" is. It also **DOES NOT** know about screen layout.
 
-### Layer 2: The Viewport System (ViewportSystem)
+### Layer 2: The Viewport System (HTMLStencilViewportSystem)
 **Role:** The Screen Splitter.
-**Responsibility:** Renders the 3D Scene N times, once for each EnginePlayer.
+**Responsibility:** Renders the 3D Scene N times, mapped to invisible HTML stencils.
 **Components:**
-*   `ViewportManager`: Calculates Scissor/Viewport rectangles based on player count (1, 2, 4).
+*   `ViewportStencilLayout`: Renders invisible `divs` using CSS to define the layout (Grid/Flex).
+*   `ViewportRenderer`: Measures these `divs` and sets `gl.viewport/scissor` accordingly.
 *   **Logic:**
-    *   Loops through `Session.players`.
-    *   Sets GL Scissor/Viewport.
-    *   Calls the App's `RenderScene(playerId)` callback.
-**Rule:** Handles the *mechanics* of splitscreen, but not the *content*.
+    *   `SessionState` provides the player count.
+    *   CSS determines the layout (1-4 players).
+    *   Renderer loops through players, measures DOM, sets Scissor, calls App Render.
+**Rule:** Handles the *mechanics* of splitscreen by delegating layout to the Browser (CSS). No JS math for layout.
 
 ### Layer 3: The Session Bridge (SessionBridge)
 **Role:** The Translator.

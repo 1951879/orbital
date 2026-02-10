@@ -92,7 +92,13 @@ export const MenuCamera: React.FC<MenuCameraProps> = ({ cameraRef }) => {
         const fovRad = (fov * Math.PI) / 180;
         const idealDist = (radius * 1.5) / Math.sin(fovRad / 2);
 
-        if (!initialized) {
+        // SANITY CHECK: If coming from Gameplay, we might be miles away
+        if (camera.position.length() > 5000) {
+            console.warn('[MenuCamera] Camera too far, creating fresh start.');
+            setInitialized(false); // Force re-init logic below
+        }
+
+        if (!initialized || camera.position.length() > 5000) {
             camera.position.set(0, radius * 0.5, idealDist);
             camera.lookAt(0, 0, 0);
             setInitialized(true);
