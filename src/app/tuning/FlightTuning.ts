@@ -33,6 +33,6 @@ export const FlightTuning = {
     },
     Collision: {
         collisionSpeedDecay: { value: 0.98, min: 0.85, max: 1, step: 0.001 },
-        collisionSafetyBuffer: { value: -0.4, min: -10, max: 10, step: 0.05 },
+        collisionSafetyBuffer: { value: 0.0, min: -10, max: 10, step: 0.05 },
     },
 };
