@@ -18,7 +18,7 @@ import { SessionBridge } from '../../app/components/SessionBridge';
 import { SessionState } from '../session/SessionState';
 import { HTMLStencilViewportSystem } from './viewport/HTMLStencilViewportSystem.tsx';
 import { useStore } from '../../app/store/useStore';
-import { ArchitectureOverlay } from '../../app/components/ui/debug/ArchitectureOverlay';
+import { FPSMeter } from '../../app/components/ui/debug/FPSMeter';
 
 import { ViewportStencilLayout } from './viewport/ViewportStencilLayout';
 
@@ -212,7 +212,7 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
             )}
 
             <div className="absolute top-4 left-4 z-50 pointer-events-none">
-                <ArchitectureOverlay />
+                <FPSMeter />
             </div>
         </div>
     );
