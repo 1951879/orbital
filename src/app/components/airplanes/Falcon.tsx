@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import * as THREE from 'three';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../effects/JetExhaust';
+import { AIRPLANE_SCALES } from '../../entities/Airplane/AirplaneConfig';
 
 export const Falcon: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
     const effectiveThrottle = throttle ?? 0.5;
@@ -21,7 +22,7 @@ export const Falcon: React.FC<{ playerId?: number, throttle?: number, throttleRe
     }, []);
 
     return (
-        <group scale={[0.35, 0.35, 0.35]}>
+        <group scale={[AIRPLANE_SCALES.falcon, AIRPLANE_SCALES.falcon, AIRPLANE_SCALES.falcon]}>
             {/* Fuselage */}
             <mesh rotation={[Math.PI / 2, 0, 0]}>
                 <cylinderGeometry args={[0.15, 0.3, 3.5, 8]} />

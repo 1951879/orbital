@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import * as THREE from 'three';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../effects/JetExhaust';
+import { AIRPLANE_SCALES } from '../../entities/Airplane/AirplaneConfig';
 
 export const Phantom: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
     const effectiveThrottle = throttle ?? 0.5;
@@ -20,7 +21,7 @@ export const Phantom: React.FC<{ playerId?: number, throttle?: number, throttleR
     }, []);
 
     return (
-        <group scale={[0.4, 0.4, 0.4]}>
+        <group scale={[AIRPLANE_SCALES.phantom, AIRPLANE_SCALES.phantom, AIRPLANE_SCALES.phantom]}>
             {/* Main Body */}
             <mesh rotation={[-Math.PI / 2, 0, 0]}>
                 <extrudeGeometry args={[deltaShape, { depth: 0.3, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05 }]} />

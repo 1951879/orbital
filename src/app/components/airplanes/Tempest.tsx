@@ -2,6 +2,7 @@
 import React from 'react';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../effects/JetExhaust';
+import { AIRPLANE_SCALES } from '../../entities/Airplane/AirplaneConfig';
 
 export const Tempest: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
     const effectiveThrottle = throttle ?? 0.5;
@@ -9,7 +10,7 @@ export const Tempest: React.FC<{ playerId?: number, throttle?: number, throttleR
     const colors = { main: '#64748b', highlight: '#06b6d4', engine: '#0f172a', canopy: '#cffafe' };
 
     return (
-        <group scale={[0.38, 0.38, 0.38]}>
+        <group scale={[AIRPLANE_SCALES.tempest, AIRPLANE_SCALES.tempest, AIRPLANE_SCALES.tempest]}>
             {/* Central Pod */}
             <mesh position={[0, 0, 0.5]} rotation={[Math.PI / 2, 0, 0]}>
                 <capsuleGeometry args={[0.4, 1.5, 4, 8]} />

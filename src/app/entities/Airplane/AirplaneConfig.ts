@@ -16,6 +16,21 @@ export const AIRPLANE_CONFIG = {
     mass: 500
 };
 
+export const AIRPLANE_SCALES: Record<AirplaneType, number> = {
+    interceptor: 0.33,
+    raptor: 0.37,
+    bomber: 0.4,
+    scout: 0.3,
+    viper: 0.35,
+    manta: 0.3,
+    corsair: 0.35,
+    eagle: 0.38,
+    falcon: 0.35,
+    tempest: 0.38,
+    phantom: 0.4,
+    starling: 0.3
+};
+
 export const COLLISION_POINTS: Record<AirplaneType, Vector3[]> = {
     interceptor: [
         new Vector3(0, -0.5, 0),

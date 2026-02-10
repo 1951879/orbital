@@ -27,7 +27,9 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
     const viewRefs = React.useRef<(HTMLDivElement | null)[]>([]);
 
     // State for managing Sims (Pilot ID -> Sim)
-    const [sims, setSims] = useState<Map<number, AirplaneSim>>(new Map());
+    // We use a REF for the source of truth to avoid React State double-invocation issues in Strict Mode
+    const simsRef = React.useRef<Map<number, AirplaneSim>>(new Map());
+    const [simVersion, setSimVersion] = useState(0); // Trigger re-render when sims change
 
     const isPaused = useStore((state) => state.isPaused);
     const activeMenuTab = useStore((state) => state.activeMenuTab);
@@ -47,58 +49,56 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
         DeviceManager.setPointerLockEnabled(!isPaused);
     }, [isPaused]);
 
-    // Manage Sim Entities based on Party
+    // Manage Sim Entities based on Party (Robust Sync via Ref)
     useEffect(() => {
-        setSims(prev => {
-            const next = new Map(prev);
-            const activeIds = new Set<number>();
+        const nextSims = simsRef.current;
+        const activeIds = new Set<number>();
+        let changed = false;
 
-            // Add/Update
-            localParty.forEach(pilot => {
-                activeIds.add(pilot.id);
-                if (!next.has(pilot.id)) {
-                    // Create new Sim
-                    // Position based on ID to avoid overlap?
-                    const offset = pilot.id * 20;
-                    const sim = new AirplaneSim(pilot.id, new Vector3(offset, 100 + offset, 0), pilot.airplane);
-                    WorldState.registerAirplane(sim);
-                    next.set(pilot.id, sim);
-                } else {
-                    // Check if Plane Type Changed
-                    const existingSim = next.get(pilot.id)!;
+        // 1. Sync: Add or Update
+        localParty.forEach(pilot => {
+            activeIds.add(pilot.id);
+            const existingSim = nextSims.get(pilot.id);
+            const targetType = pilot.airplane || 'interceptor';
 
-                    // Add safety check for pilot.airplane to avoid undefined/default issues
-                    const newType = pilot.airplane || 'interceptor';
+            if (!existingSim) {
+                // NEW: Create and Register
+                const offset = pilot.id * 20; // Spread out initial spawn
+                console.log(`[SceneRoot] Creating Sim for Pilot ${pilot.id} (${targetType})`);
+                const sim = new AirplaneSim(pilot.id, new Vector3(offset, 100 + offset, 0), targetType);
+                WorldState.registerAirplane(sim);
+                nextSims.set(pilot.id, sim);
+                changed = true;
+            } else if (existingSim.type !== targetType) {
+                // CHANGED: Replace and Re-Register
+                console.log(`[SceneRoot] Updating Sim for Pilot ${pilot.id} (${existingSim.type} -> ${targetType})`);
+                WorldState.unregisterAirplane(existingSim);
 
-                    if (existingSim.type !== newType) {
-                        // Type changed! Replace the Sim.
-                        WorldState.unregisterAirplane(existingSim);
+                const newSim = new AirplaneSim(pilot.id, existingSim.position.clone(), targetType);
+                newSim.quaternion.copy(existingSim.quaternion);
+                newSim.currentSpeed = existingSim.currentSpeed;
+                newSim.throttle = existingSim.throttle;
 
-                        // Reset position slightly to ensure clean collision state? 
-                        // Or keep existing position but update type.
-                        const newSim = new AirplaneSim(pilot.id, existingSim.position.clone(), newType);
-                        newSim.quaternion.copy(existingSim.quaternion);
-                        newSim.currentSpeed = existingSim.currentSpeed; // Preserve speed
-                        newSim.throttle = existingSim.throttle; // Preserve throttle
-
-                        WorldState.registerAirplane(newSim);
-                        next.set(pilot.id, newSim);
-                    }
-                }
-            });
-
-            // Remove
-            for (const id of next.keys()) {
-                if (!activeIds.has(id)) {
-                    // Logic to unregister sim? WorldState doesn't have unregister yet?
-                    // Assuming for now we just drop reference.
-                    next.delete(id);
-                }
+                WorldState.registerAirplane(newSim);
+                nextSims.set(pilot.id, newSim);
+                changed = true;
             }
-
-            return next;
         });
-    }, [localParty]);
+
+        // 2. Cleanup: Remove Stale
+        for (const [id, sim] of nextSims) {
+            if (!activeIds.has(id)) {
+                console.log(`[SceneRoot] Removing Sim for Pilot ${id}`);
+                WorldState.unregisterAirplane(sim);
+                nextSims.delete(id);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            setSimVersion(v => v + 1);
+        }
+    }, [localParty]); // Only re-run when localParty changes
 
     useEffect(() => {
         const initEngine = async () => {
@@ -132,6 +132,7 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
         const cleanup = () => {
             Loop.stop();
             DeviceManager.cleanup();
+            WorldState.reset();
         };
 
         initEngine();
@@ -162,8 +163,8 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
                     <>
                         {/* --- GAMEPLAY (SPLITSCREEN + PHYSICS) --- */}
 
-                        {/* ENTITIES (Global Render) */}
-                        {Array.from(sims.entries()).map(([id, sim]) => (
+                        {/* PROCESSED SIMS (Global Render) */}
+                        {Array.from(simsRef.current.entries()).map(([id, sim]) => (
                             <React.Fragment key={id}>
                                 <AirplaneView sim={sim} playerId={id} />
                                 <TelemetryBridge sim={sim} playerId={id} />
@@ -173,7 +174,7 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
                         {/* SPLITSCREEN VIEWPORT SYSTEM */}
                         <HTMLStencilViewportSystem viewRefs={viewRefs}>
                             {(player, cameraRef) => {
-                                const sim = sims.get(player.id);
+                                const sim = simsRef.current.get(player.id);
                                 return (
                                     <>
                                         <CameraManager

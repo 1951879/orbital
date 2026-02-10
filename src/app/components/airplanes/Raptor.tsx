@@ -4,6 +4,7 @@ import * as THREE from 'three';
 // Fix: Import ThreeElements to provide JSX intrinsic types
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../effects/JetExhaust';
+import { AIRPLANE_SCALES } from '../../entities/Airplane/AirplaneConfig';
 
 export const Raptor: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
     const effectiveThrottle = throttle ?? 0.5;
@@ -49,7 +50,7 @@ export const Raptor: React.FC<{ playerId?: number, throttle?: number, throttleRe
     }, []);
 
     return (
-        <group scale={[0.37, 0.37, 0.37]}>
+        <group scale={[AIRPLANE_SCALES.raptor, AIRPLANE_SCALES.raptor, AIRPLANE_SCALES.raptor]}>
             <mesh rotation={[Math.PI / 2, 0, 0]} scale={[1.4, 0.5, 0.6]}>
                 <cylinderGeometry args={[0.35, 0.5, 2.6, 8]} />
                 <meshStandardMaterial color={colors.main} roughness={0.3} metalness={0.6} />

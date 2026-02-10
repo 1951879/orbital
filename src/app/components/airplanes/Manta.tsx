@@ -4,6 +4,7 @@ import * as THREE from 'three';
 // Fix: Import ThreeElements to provide JSX intrinsic types
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../effects/JetExhaust';
+import { AIRPLANE_SCALES } from '../../entities/Airplane/AirplaneConfig';
 
 export const Manta: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
     const effectiveThrottle = throttle ?? 0.5;
@@ -22,7 +23,7 @@ export const Manta: React.FC<{ playerId?: number, throttle?: number, throttleRef
     }, []);
 
     return (
-        <group scale={[0.3, 0.3, 0.3]}>
+        <group scale={[AIRPLANE_SCALES.manta, AIRPLANE_SCALES.manta, AIRPLANE_SCALES.manta]}>
             <mesh rotation={[-Math.PI / 2, 0, 0]}>
                 <extrudeGeometry args={[bodyShape, { depth: 0.4, bevelEnabled: true, bevelThickness: 0.1, bevelSize: 0.1, bevelSegments: 3 }]} />
                 <meshStandardMaterial color={colors.main} roughness={0.3} metalness={0.8} />

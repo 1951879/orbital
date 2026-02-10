@@ -18,9 +18,16 @@ export class HapticManager {
      */
     public static rumble(intensity: number, duration = 150, gamepadIndex?: number) {
         const now = Date.now();
-        // if (now - this.lastRumbleTime < this.MIN_RUMBLE_INTERVAL) return; // Debounce per-pad? Or global?
-        // Let's remove global debounce if targeting specific pads, or make it per-pad map. 
-        // For simplicity, keeping it simple:
+
+        // Global throttle to prevent browser API spam (performance)
+        // We only skip if targeting ALL gamepads (no index) to prevent loop spam
+        if (gamepadIndex === undefined && now - this.lastRumbleTime < this.MIN_RUMBLE_INTERVAL) {
+            return;
+        }
+
+        // If targeting a specific pad, we allow it but update the global time
+        // This is a simple heuristic; for perfect per-pad throttling we'd map lastRumbleTime by index.
+        this.lastRumbleTime = now;
 
         const gamepads = navigator.getGamepads?.() || [];
 

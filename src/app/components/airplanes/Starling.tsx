@@ -2,6 +2,7 @@
 import React from 'react';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../effects/JetExhaust';
+import { AIRPLANE_SCALES } from '../../entities/Airplane/AirplaneConfig';
 
 export const Starling: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
     const effectiveThrottle = throttle ?? 0.5;
@@ -9,7 +10,7 @@ export const Starling: React.FC<{ playerId?: number, throttle?: number, throttle
     const colors = { main: '#facc15', highlight: '#000000', engine: '#171717', canopy: '#0ea5e9' };
 
     return (
-        <group scale={[0.3, 0.3, 0.3]}>
+        <group scale={[AIRPLANE_SCALES.starling, AIRPLANE_SCALES.starling, AIRPLANE_SCALES.starling]}>
             {/* Teardrop Body */}
             <mesh rotation={[Math.PI / 2, 0, 0]}>
                 <sphereGeometry args={[0.8, 16, 16]} />

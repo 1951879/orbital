@@ -1,5 +1,5 @@
 import { Vector3, Quaternion, MathUtils, Euler } from 'three';
-import { AIRPLANE_CONFIG, COLLISION_POINTS } from './AirplaneConfig';
+import { AIRPLANE_CONFIG, COLLISION_POINTS, AIRPLANE_SCALES } from './AirplaneConfig';
 import { SessionState } from '../../../engine/session/SessionState';
 import { HapticManager } from '../../../engine/kernel/HapticManager';
 import { Time } from '../../../engine/kernel/Time';
@@ -74,6 +74,9 @@ export class AirplaneSim {
     }
 
     public update() {
+        // 0. Pause Check
+        if (useStore.getState().isPaused) return;
+
         const dt = Time.dt;
         const tuning = FlightTuning;
 
@@ -208,25 +211,23 @@ export class AirplaneSim {
         const tuning = FlightTuning;
 
         // 1. Construct Visual Rotation Quaternion (Bank/Pitch)
-        this._euler.set(this.targetPitch, 0, this.targetRoll, 'XYZ'); // Order? Y is controlled by PhysicsQuat.
-        // Visual mesh is usually: RotateX(pitch), RotateZ(roll). Order matters. 
-        // AirplaneView: set(0,0,0); rotateX; rotateZ; -> Intrinsic rotations?
-        // ThreeJS rotateX/Z are local.
-        // Equivalent to Euler(pitch, 0, roll) if applied in that order? 
+        this._euler.set(this.targetPitch, 0, this.targetRoll, 'XYZ');
         this._visualQuat.setFromEuler(this._euler);
 
         // Get collision points for this hull
         const points = COLLISION_POINTS[this.type];
         if (!points) return;
 
+        // Get visual scale (default to 1 if missing, though it shouldn't be)
+        const scale = AIRPLANE_SCALES[this.type] || 1.0;
+
         let maxRequiredAltitude = -Infinity;
         const currentCenterPos = this.position.clone().setLength(this.altitude);
 
-        // We need to simulate the exact hierarchy:
-        // WorldPos + (RigRot * (VisualRot * PointOffset))
-
         for (const pt of points) {
+            // Apply SCALE -> Visual Rot -> Physics Rot -> World Pos
             this._tempPoint.copy(pt)
+                .multiplyScalar(scale)             // Apply Visual Scale
                 .applyQuaternion(this._visualQuat) // Apply Visual (Pitch/Bank)
                 .applyQuaternion(this.quaternion)  // Apply Physics (Heading/Gravity)
                 .add(currentCenterPos);            // Add World Pos
@@ -251,9 +252,6 @@ export class AirplaneSim {
             const groundAlt = planetRadius + h;
 
             // 3. Calc Required Center Altitude to clear ground
-            // PointAlt must be > GroundAlt + Buffer
-            // (CenterAlt + DeltaAlt) > GroundAlt + Buffer
-            // CenterAlt > GroundAlt + Buffer - DeltaAlt
             const reqAlt = groundAlt - deltaAlt;
 
             if (reqAlt > maxRequiredAltitude) {
@@ -264,38 +262,58 @@ export class AirplaneSim {
         const SAFETY_BUFFER = FlightTuning.Collision.collisionSafetyBuffer.value; // Tunable
         const minAllowedAltitude = maxRequiredAltitude + SAFETY_BUFFER;
 
+        // Was grounded previous frame?
+        const wasGrounded = this.isGrounded;
+
         if (this.altitude < minAllowedAltitude) {
             // COLLISION!
+            if (!wasGrounded) {
+                const diff = maxRequiredAltitude - (minAllowedAltitude - SAFETY_BUFFER);
+                console.log(`[COLLISION] Type: ${this.type} | Alt: ${this.altitude.toFixed(2)} | MinAllowed: ${minAllowedAltitude.toFixed(2)} | Alloc: ${diff.toFixed(2)}`);
+                console.log(`[COLLISION] Pos: ${this.position.x.toFixed(1)}, ${this.position.y.toFixed(1)}, ${this.position.z.toFixed(1)}`);
+            }
             this.altitude = minAllowedAltitude;
             this.isGrounded = true;
 
-            // Friction/Impact
+            // Friction/Impact Logic
             if (this.currentSpeed > 1.0) {
-                // Trigger Haptic
                 const player = SessionState.getPlayer(this.playerId);
                 if (player) {
                     const devId = player.deviceId;
+                    const maxSpeed = AIRPLANE_CONFIG.speed;
 
                     if (devId.startsWith('gamepad:')) {
-                        // Gamepad Rumble (Targeted)
                         const gpIndex = parseInt(devId.split(':')[1]);
                         if (!isNaN(gpIndex)) {
-                            HapticManager.collisionRumble(this.currentSpeed, AIRPLANE_CONFIG.speed, gpIndex);
+
+                            // 1. Impact Rumble (Only on transition to Grounded)
+                            if (!wasGrounded) {
+                                // Hard hit
+                                HapticManager.collisionRumble(this.currentSpeed, maxSpeed, gpIndex);
+                            }
+                            // 2. Taxi Rumble (Continuous, lighter)
+                            else {
+                                // Only rumble if moving fast enough
+                                if (this.currentSpeed > 5.0) {
+                                    // Light rumble for rolling on ground
+                                    const taxiIntensity = (this.currentSpeed / maxSpeed) * 0.15;
+                                    HapticManager.rumble(taxiIntensity, 100, gpIndex);
+                                }
+                            }
                         }
                     } else if (devId === 'touch' || devId.startsWith('touch')) {
-                        // Mobile Vibration
-                        HapticManager.vibrate(200);
+                        // Mobile Vibration - Only on initial impact to save battery/annoyance
+                        if (!wasGrounded) {
+                            HapticManager.vibrate(200);
+                        }
                     }
-                    // Keyboard/Mouse: Do nothing (No Haptics)
                 }
             }
 
             this.currentSpeed *= FlightTuning.Collision.collisionSpeedDecay.value;
 
-            // Auto-Pitch up if crashing?
-            // Legacy did: input.current.y += 2.0 * delta; (Forces nose up)
-            // But we can't easily force InputManager state.
-            // We can add a "CollisionPenalty" to the pitch calculation next frame if we want.
+        } else {
+            this.isGrounded = false;
         }
     }
 }
