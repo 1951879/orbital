@@ -1,11 +1,11 @@
 import { Vector3, Quaternion, MathUtils, Euler } from 'three';
 import { AIRPLANE_CONFIG, COLLISION_POINTS, AIRPLANE_SCALES } from './AirplaneConfig';
-import { SessionState } from '../../../engine/session/SessionState';
-import { HapticManager } from '../../../engine/kernel/HapticManager';
-import { Time } from '../../../engine/kernel/Time';
-import { TerrainManager } from '../../../engine/sim/terrain/TerrainManager';
-import { useStore } from '../../store/useStore';
-import { AirplaneType } from '../../../types';
+import { SessionState } from '../../../../engine/session/SessionState';
+import { HapticManager } from '../../../../engine/kernel/HapticManager';
+import { Time } from '../../../../engine/kernel/Time';
+import { TerrainManager } from '../../../../engine/sim/terrain/TerrainManager';
+import { useStore } from '../../../store/useStore';
+import { AirplaneType } from '../../../../types';
 import { FlightTuning } from '../../tuning/FlightTuning';
 
 /**

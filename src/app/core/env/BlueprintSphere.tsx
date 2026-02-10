@@ -3,8 +3,8 @@ import React, { useRef, useMemo } from 'react';
 // Fix: Import ThreeElements to provide JSX intrinsic types
 import { useFrame, ThreeElements } from '@react-three/fiber';
 import { Mesh, Color, SphereGeometry, ShaderMaterial, FrontSide, MeshStandardMaterial, AdditiveBlending, BackSide, Vector3, Group, MathUtils } from 'three';
-import { useStore } from '../store/useStore';
-import { SimplexNoise, getTerrainElevation } from '../../engine/utils/terrain';
+import { useStore } from '../../store/useStore';
+import { SimplexNoise, getTerrainElevation } from '../../../engine/utils/terrain';
 
 export const BlueprintSphere: React.FC = () => {
   const terrainRef = useRef<Mesh>(null);

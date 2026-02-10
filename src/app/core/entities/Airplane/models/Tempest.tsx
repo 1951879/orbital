@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { ThreeElements } from '@react-three/fiber';
-import { JetExhaust } from '../effects/JetExhaust';
-import { AIRPLANE_SCALES } from '../../entities/Airplane/AirplaneConfig';
+import { JetExhaust } from '../../effects/JetExhaust';
+import { AIRPLANE_SCALES } from '../AirplaneConfig';
 
 export const Tempest: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
     const effectiveThrottle = throttle ?? 0.5;

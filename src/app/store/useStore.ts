@@ -58,7 +58,7 @@ export const useStore = create<AppState>((set, get) => ({
     gameMode: 'single',
     setGameMode: (mode) => set({ gameMode: mode }),
 
-    mission: 'free',
+    mission: 'main_menu',
     setMission: (mission) => set({ mission }),
 
 
@@ -85,8 +85,9 @@ export const useStore = create<AppState>((set, get) => ({
     setLobbies: (lobbies) => set({ lobbies }),
     setCurrentRoomId: (id) => set({ currentRoomId: id }),
 
-    socket: null,
-    setSocket: (socket) => set({ socket }),
+    // Socket Moved to NetworkManager
+    // socket: null,
+    // setSocket: (socket) => set({ socket }),
 
     setOnlineStatus: (status) => set({ socketStatus: status, isOnline: status === 'connected' }),
     setRemotePlayers: (players) => set({ remotePlayers: players }),
@@ -231,8 +232,8 @@ export const useStore = create<AppState>((set, get) => ({
     },
 
     // --- SQUADRON STATE ---
-    squadronAnchor: null,
-    setSquadronAnchor: (anchor) => set({ squadronAnchor: anchor }),
+    // squadronAnchor: null,
+    // setSquadronAnchor: (anchor) => set({ squadronAnchor: anchor }),
 
     abortMission: () => set((state) => ({
         mission: 'free',

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Vector3, MathUtils, Vector2 } from 'three';
-import { AirplaneSim } from '../../app/entities/Airplane/AirplaneSim';
+import { AirplaneSim } from '../../app/core/entities/Airplane/AirplaneSim';
 import { useStore } from '../../app/store/useStore'; // For params if needed
 
 // Configuration for the Chase Camera

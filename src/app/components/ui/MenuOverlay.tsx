@@ -50,7 +50,7 @@ export const MenuOverlay: React.FC<{ onTogglePause: () => void }> = ({ onToggleP
     const isPendingLaunch = false; // Simplified as only Free Flight exists now
 
     const isMissionInProgress = useMemo(() => {
-        return mission !== 'free'; // Only if mission is not free (if we had other modes, but we don't now)
+        return mission !== 'main_menu';
     }, [mission]);
 
     useEffect(() => {
@@ -133,13 +133,19 @@ export const MenuOverlay: React.FC<{ onTogglePause: () => void }> = ({ onToggleP
         if (localParty.length === 0) return;
         const allReady = localParty.every(p => p.ui.status === 'ready');
         if (allReady) {
-            onTogglePause();
+            // If in Main Menu, set mission to 'free' to Start Game
+            if (mission === 'main_menu') {
+                setMission('free');
+            } else {
+                // If In-Game (Paused), Toggle Pause to Resume
+                onTogglePause();
+            }
             setLaunchError(null);
         } else {
             setLaunchError("WAITING FOR SQUADRON");
             setTimeout(() => setLaunchError(null), 1500);
         }
-    }, [localParty, onTogglePause]);
+    }, [localParty, onTogglePause, mission, setMission]);
 
     const handleAction = useCallback(() => {
         if (activeTab === 'hangar') return;
@@ -162,7 +168,11 @@ export const MenuOverlay: React.FC<{ onTogglePause: () => void }> = ({ onToggleP
                 const current = useStore.getState().isMultiplayerEnabled;
                 useStore.getState().setMultiplayerEnabled(!current);
             }
-            else if (focusIndex === 3) setMission('free');
+            else if (focusIndex === 3) {
+                // Selection of "Free Flight" just confirms it, doesn't launch yet?
+                // Or typically resets to Free Flight mode?
+                // For now, no-op or maybe emphasize selection.
+            }
             else if (focusIndex >= 4) {
                 const presetIdx = focusIndex - 4;
                 if (PRESETS[presetIdx]) {
@@ -177,10 +187,14 @@ export const MenuOverlay: React.FC<{ onTogglePause: () => void }> = ({ onToggleP
     }, [activeTab, focusIndex, setMission, generateNewTerrain, setTerrainParam]);
 
     const handleAbortAction = useCallback(() => {
-        if (mission !== 'free') {
-            abortMission();
+        if (mission !== 'main_menu') {
+            // Abort Mission -> Go back to Main Menu
+            setMission('main_menu');
+            // We don't need abortMission() from store if we just set mission?
+            // Store's abortMission sets mission='free' and isPaused=true.
+            // We want mission='main_menu'.
         }
-    }, [mission, abortMission]);
+    }, [mission, setMission]);
 
     const gamepadHandlers = useMemo(() => ({
         onTogglePause: (activeTab === 'hangar' || isPendingLaunch) ? handleArcadeLaunch : onTogglePause,

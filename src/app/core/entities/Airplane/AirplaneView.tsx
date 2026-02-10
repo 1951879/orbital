@@ -1,11 +1,11 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Group, SpotLight, Object3D, Vector3 } from 'three';
-import { AirplaneGeometry } from '../../components/AirplaneGeometry';
+import { AirplaneGeometry } from './models/AirplaneGeometry';
 import { AirplaneSim } from './AirplaneSim';
-import { useAirplaneSound } from '../../../hooks/useAirplaneSound';
+import { useAirplaneSound } from '../../../../hooks/useAirplaneSound'; // Fixed path
 import { AIRPLANE_CONFIG } from './AirplaneConfig';
-import { useStore } from '../../store/useStore'; // For mission state (isSeeking)
+import { useStore } from '../../../store/useStore'; // Fixed path
 
 
 /**

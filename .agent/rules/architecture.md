@@ -2,97 +2,172 @@
 trigger: always_on
 ---
 
-SYSTEM ARCHITECTURE: PROJECT ORBITAL
-Role: High-Performance 3D Web Application Core Philosophy: "Diamond Architecture" with Strict Unidirectional Dependencies. Execution Model: Main Thread Simulation (Worker-Ready Encapsulation).
+# SYSTEM ARCHITECTURE: PROJECT ORBITAL (2026 REVISION)
 
-I. THE ARCHITECTURAL LAYERS (The "Diamond")
-Code must be organized into four distinct layers. Dependency flow is strictly unidirectional: Higher layers depend on Lower layers. Lower layers NEVER import from Higher layers.
+## A. THE PHILOSOPHY: "3-LAYER DIAMOND"
+The application is structured into three strictly isolated layers. The goal is **ZERO CONTEXT LEAKAGE**. An agent working in a Game Mode should never need to read the Engine source code.
 
-Layer 1: The Kernel (src/engine/kernel/ & src/engine/input/)
-Role: The Hardware Abstraction Layer.
-Responsibility: Manages the raw execution environment.
-Components:
-Loop: Manages the requestAnimationFrame cycle and Fixed Timesteps.
-InputManager (src/engine/input): Normalizes distinct input sources (Mouse, Touch, Keyboard) into a unified InputState.
-Time: Handles Delta Time (dt) and Clock synchronization.
-Rule: NO React code. NO Rendering logic. Pure TypeScript classes only.
+### 1. The Dependency Graph (Strict Unidirectional)
+```mermaid
+graph TD
+    Modes[Layer 3: Game Modes] -->|Imports| Core[Layer 2: Core Assets]
+    Modes -->|Imports| Engine[Layer 1: Engine Runtime]
+    Core -->|Imports| Engine
+    Engine -->|NEVER IMPORTS| Core
+    Engine -->|NEVER IMPORTS| Modes
+```
 
-Layer 2: The Simulation (src/engine/sim/)
-Role: The Mathematical "Source of Truth".
-Responsibility: Calculates the state of the world (Physics, AI, Logic).
-Components:
-WorldState: The central data store for all entities.
-PhysicsWorld: Wrapper around rapier3d-compat. DO NOT USE @react-three/rapier logic here.
-FloatingOrigin: Manages the coordinate system rebasing (shifting the world center).
-LogicSystems: Pure functions that mutate entity state based on rules.
-Rule: This layer runs at a fixed tick rate. It uses Mutable State (Classes/TypedArrays) for performance.
+---
 
-Layer 3: The Presentation (src/engine/render/)
-Role: The Visualization Layer.
-Responsibility: Reads Layer 2 and draws it to the screen.
-Components:
-SceneRoot: The React-Three-Fiber entry point.
-ViewSync: Components that read from WorldState inside useFrame to update 3D objects.
-CameraDirector: Controls the camera based on WorldState focus targets.
-Rule: Components here READ from the Sim layer. They do not hold game logic. They purely reflect the current state.
-Rule: R3F usage (@react-three/fiber, @react-three/drei) is strictly limited to this layer.
+## B. THE LAYERS (DETAILED)
 
-Layer 4: The Application (src/app/)
-Role: The Content & Business Logic.
-Responsibility: Defines what the app is.
-Components:
-GameModes/: Specific logic for "Deathmatch", "Free Roam", etc.
-UI/: 2D React overlays (HUDs, Menus).
-Assets/: 3D Model definitions and textures.
-Rule: This layer "plugs into" the Engine. It creates Entities via EntityConfigs.
+### Layer 1: The Engine (`src/engine/`)
+**Role:** The "Black Box" Runtime.
+**Definition:** Contains infrastructure that is genre-agnostic. It does not know what a "Plane" is. It only knows "RigidBody", "InputDevice", and "Camera".
 
+#### 1.1. Kernel (`src/engine/kernel/` & `src/engine/input`)
+*   **Loop.ts**: Manages the `requestAnimationFrame` cycle.
+    *   *Constraint:* Enforces Fixed Timestep for Physics to ensure deterministic behavior.
+    *   *Rule:* Pure TypeScript class. No React dependencies.
+*   **Time.ts**: Handles Delta Time (`dt`) and Clock synchronization.
+*   **InputManager**: Normalizes distinct input sources (Mouse, Touch, Keyboard) into a unified `InputState`.
+    *   *Responsibility:* Maps raw device events to abstract Actions (e.g., "FIRE", "PITCH").
 
-II. CRITICAL TECHNICAL DECISIONS
-1. Physics Engine
-Engine: rapier3d-compat (Raw).
-Constraint: Do NOT use @react-three/rapier components (<RigidBody>) for game logic.
-Pattern: The Sim layer manages the RAPIER.World. The Render layer synchronizes meshes to RAPIER.RigidBody positions.
-2. Asset Pipeline (Entity Configs)
-Problem: The Sim layer cannot load .glb files to know their size/shape.
-Solution: Use Entity Configs (JSON/TS objects).
-Example:
-export const SHIP_CONFIG = {
-  collider: { type: 'capsule', radius: 2, height: 10 },
-  mass: 500,
-  turnRate: 1.5
-};
-Workflow: Sim loads SHIP_CONFIG to build physics. Render loads Ship.glb to draw visuals.
+#### 1.2. Simulation (`src/engine/sim/`)
+*   **PhysicsWorld.ts**: Wrapper around `rapier3d-compat` (Raw).
+    *   *Constraint:* DO NOT use `@react-three/rapier` components (`<RigidBody>`) for game logic.
+    *   *Constraint:* Simulation runs at a fixed tick rate. Uses Mutable State (TypedArrays) for performance.
+    *   *API:* Exposes `PhysicsWorld.world` for read-only access.
+*   **WorldState.ts**: The central data store for all entities.
+    *   *Contract:* Entities must implement `update(dt)` to be ticked.
+*   **FloatingOrigin**: Manages coordinate system rebasing.
+    *   *Logic:* Shifts the world center when the player moves > 5000 units from (0,0,0) to prevent floating-point jitter.
 
-3. Precision & Floating Origin
-Precision: Standard 32-bit Floating Point (Vector3).
-Scale: Planets < 100km diameter.
-Rebasing: When the player moves > 5000 units from (0,0,0), the Sim layer shifts all Entity positions and the RAPIER.World bodies by -PlayerPosition. The Render layer sees a seamless transition.
+#### 1.3. Rendering (`src/engine/render/`)
+*   **SceneRoot.tsx**: The React-Three-Fiber entry point ("Bootloader").
+    *   *Responsibility:* Initializes WebGL, Physics, and Input.
+    *   *Action:* Checks `activeMode` and renders `<activeMode.SceneComponent />`.
+*   **ViewportSystem/**: Handles Split-Screen logic.
+    *   *Abstraction:* Takes `N` cameras from the Mode and renders them to `N` divs using Stencil/Scissor tests.
+*   **ViewSync**: Components that read from `WorldState` inside `useFrame` to update 3D objects.
+    *   *Rule:* Components here READ from the Sim layer. They do not hold game logic. They purely reflect current state.
 
-4. Component-Entity Separation
-Rule: Strict file separation to avoid cyclic dependencies.
-Structure:
-src/app/entities/Ship/ShipSim.ts (Logic/Physics config)
-src/app/entities/Ship/ShipView.tsx (Visuals/JSX)
+#### 1.4. Session (`src/engine/session/`)
+*   **SessionState.ts**: Manages "Who is here".
+    *   *State:* `players: [{ id: 0, inputDevice: 'gamepad:0' }]`.
+    *   *Responsibility:* Assigns Input Devices to Player IDs and handles Join/Leave logic.
+*   **NetworkManager.ts**: Manages Socket.IO connection.
+    *   *Action:* Syncs generic byte arrays for `RemoteEntity` replication. Does not decode Game Logic.
 
-III. STATE MANAGEMENT
-Law 1: The Reactive Store (Zustand)
-Use for: UI State, Scores, Game Phase (Lobby vs Game).
-Behavior: Updates trigger React re-renders.
-Law 2: The Mutable Store (Direct Access)
-Use for: Position, Velocity, Health, Cooldowns.
-Behavior: NEVER triggers React re-renders. Accessed via direct reference in the Game Loop.
-IV. DIRECTORY STRUCTURE
+---
+
+### Layer 2: The Core (`src/app/core/`)
+**Role:** The "Standard Library" (Assets).
+**Definition:** Reusable assets that encapsulate implementation details (Math, Visuals, Configs).
+
+#### 2.1. Entities (`src/app/core/entities/`)
+*   **Airplane/**:
+    *   `AirplaneSim.ts`: The Flight Physics Model.
+    *   `AirplaneView.tsx`: The 3D Mesh & Particles.
+    *   `AirplaneConfig.ts`: Stats (Speed, Turn Rate).
+
+#### 2.2. Environment (`src/app/core/env/`)
+*   `BlueprintSphere.tsx`: The standard Grid-Planet mesh.
+*   `SunLight.tsx`: Standard lighting setup.
+
+#### 2.3. Input (`src/app/core/input/`)
+*   `DefaultProfiles.ts`: Exports `StandardFlightProfile` (Stick=Pitch/Roll) & `StandardMenuProfile`.
+
+#### 2.4. Cameras (`src/app/core/cameras/`)
+*   `ChaseCamera.tsx`: Standard 3rd-person camera with spring arm logic.
+*   `OrbitCamera.tsx`: Menu camera for inspecting objects.
+
+---
+
+### Layer 3: The Modes (`src/app/modes/`)
+**Role:** The "Application".
+**Definition:** The specific rules that bind Engine and Core together.
+
+#### 3.1. The `GameMode` Interface
+Every Mode must export this contract:
+```typescript
+interface GameMode {
+  id: string; // e.g. "free_flight"
+  SceneComponent: React.FC; // Renders the World
+  UIComponent: React.FC;    // Renders the HUD
+  update: (dt: number) => void; // Runs the Logic
+  dispose: () => void; // Cleanup
+}
+```
+
+#### 3.2. Example: `FreeFlightMode`
+*   **SceneComponent**:
+    *   Renders `<Core.BlueprintSphere />`.
+    *   Renders `<Core.ChaseCamera />`.
+    *   Iterates `players` and renders `<Core.AirplaneView />`.
+*   **Update Loop**:
+    *   Iterates `players`.
+    *   Read Input via `SessionState`.
+    *   Calls `player.sim.update(dt)`.
+
+---
+
+## C. STATE MANAGEMENT (CONTEXT ISOLATION)
+
+To allow AI Agents to work without breaking other modes, we enforce **State Sharding**.
+
+### 1. Global Store (`useStore.ts`)
+*   **Scope:** User Preferences & Hardware.
+*   **Allowed Data:** Volume, Graphics Settings, Input Bindings, Debug Flags.
+*   **Forbidden Data:** Score, Health, Projectiles, Game Phase.
+
+### 2. Session Store (`SessionState.ts`)
+*   **Scope:** The Setup.
+*   **Data:** Connected Controllers, Player Colors, Network Latency.
+
+### 3. Mode Store (Local to Mode)
+*   **Scope:** The Gameplay.
+*   **Pattern:** Each Mode folder has its own store (e.g., `useCaptureTheFlagStore`).
+*   **Data:** Flags Captured, Respawn Timers, Powerups.
+*   **Why:** If an AI breaks `useCaptureTheFlagStore`, `FreeFlightMode` is unaffected.
+
+---
+
+## D. EXTENSIBILITY PATTERNS
+
+### 1. Adding a New Entity (e.g., Tank)
+*   **Step 1 (Vibe Coding):** Create `src/app/modes/TankMode/TankSim.ts`.
+    *   Implement usage within `TankMode`.
+*   **Step 2 (Canonization):** Move to `src/app/core/entities/TankSim.ts`.
+    *   Now `CaptureTheFlagMode` can import it too.
+
+### 2. Adding a New Input
+*   **Step 1:** Define `TankProfile` object in `TankMode.tsx`.
+*   **Step 2:** Register it: `InputManager.registerProfile('TANK', TankProfile)`.
+*   **Step 3:** Assign it: `player.input.setProfile('TANK')`.
+
+---
+
+## E. FILE STRUCTURE REFERENCE
+```text
 src/
-├── engine/              # The Reusable Core
-│   ├── kernel/          # Loop, Time
-│   ├── input/           # DeviceManager, InputMapper
-│   ├── sim/             # Physics (Rapier), WorldState, Systems
-│   ├── render/          # R3F Root, ViewSync
-│   └── utils/           # Math helpers
+├── engine/                 # [Layer 1] The Runtime
+│   ├── kernel/             # Loop, Time
+│   ├── sim/                # PhysicsWorld (Rapier), WorldState, FloatingOrigin
+│   ├── render/             # SceneRoot (Bootloader), ViewSync
+│   └── session/            # Network, Input, SessionState
 │
-├── app/                 # The Specific Application (Orbital)
-│   ├── entities/        # Paired Sim/View definitions
-│   ├── ui/              # HUD, Menus
-│   └── store/           # Zustand Stores
-│
-└── assets/              # Static files
+├── app/
+│   ├── core/               # [Layer 2] The Assets
+│   │   ├── entities/       # Airplane, Tank
+│   │   ├── cameras/        # ChaseCamera, OrbitCamera
+│   │   ├── env/            # Planet, Sun
+│   │   └── input/          # StandardProfiles
+│   │
+│   ├── modes/              # [Layer 3] The Games
+│   │   ├── FreeFlight/     # FreeFlightMode.tsx, useFreeFlightStore.ts
+│   │   ├── MainMenu/       # MainMenuMode.tsx
+│   │   └── [NEW MODE]/     # Your AI workspace
+│   │
+│   └── store/              # Global Prefs (useStore.ts)
+```

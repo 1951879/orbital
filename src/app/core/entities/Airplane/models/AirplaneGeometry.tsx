@@ -1,19 +1,19 @@
 
 import React from 'react';
-import { AirplaneType } from '../../types';
-import { Interceptor } from './airplanes/Interceptor';
-import { Raptor } from './airplanes/Raptor';
-import { Bomber } from './airplanes/Bomber';
-import { Scout } from './airplanes/Scout';
-import { Viper } from './airplanes/Viper';
-import { Manta } from './airplanes/Manta';
-import { Corsair } from './airplanes/Corsair';
-import { Eagle } from './airplanes/Eagle';
-import { Falcon } from './airplanes/Falcon';
-import { Tempest } from './airplanes/Tempest';
-import { Phantom } from './airplanes/Phantom';
-import { Starling } from './airplanes/Starling';
-import { useStore } from '../store/useStore';
+import { AirplaneType } from '../../../../../types';
+import { Interceptor } from './Interceptor';
+import { Raptor } from './Raptor';
+import { Bomber } from './Bomber';
+import { Scout } from './Scout';
+import { Viper } from './Viper';
+import { Manta } from './Manta';
+import { Corsair } from './Corsair';
+import { Eagle } from './Eagle';
+import { Falcon } from './Falcon';
+import { Tempest } from './Tempest';
+import { Phantom } from './Phantom';
+import { Starling } from './Starling';
+import { useStore } from '../../../../store/useStore';
 
 interface AirplaneGeometryProps {
   type: AirplaneType;

@@ -1,9 +1,9 @@
 import React, { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Vector3, Matrix4, MathUtils, Camera } from 'three';
-import { AirplaneSim } from '../../../app/entities/Airplane/AirplaneSim';
+import { AirplaneSim } from '../entities/Airplane/AirplaneSim';
 import { smoothCameraTransform, shouldSnapCamera } from './utils/CameraUtils';
-import { useStore } from '../../../app/store/useStore';
+import { useStore } from '../../store/useStore';
 
 const CAM_CONFIG = {
     dist: 4.0,         // Legacy: 6.0 (very close to ship)

@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
-import { SessionState } from '../session/SessionState';
+import { SessionState } from '../../../engine/session/SessionState';
 
 export const GamepadOrbitControls: React.FC<any> = (props) => {
     const controlsRef = useRef<OrbitControlsImpl>(null);

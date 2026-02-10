@@ -1,8 +1,8 @@
 import React from 'react';
 import { useStore } from '../../app/store/useStore';
-import { ChaseCamera } from './cameras/ChaseCamera';
-import { MenuCamera } from './cameras/MenuCamera';
-import { SquadronCamera } from './cameras/SquadronCamera';
+import { ChaseCamera } from '../../app/core/cameras/ChaseCamera';
+import { OrbitCamera } from '../../app/core/cameras/OrbitCamera';
+import { SquadronCamera } from '../../app/core/cameras/SquadronCamera';
 import { WorldState } from '../sim/WorldState';
 
 /**
@@ -58,7 +58,7 @@ export const CameraManager: React.FC<CameraManagerProps> = ({ playerSim, cameraR
 
     // Render appropriate camera
     if (cameraMode === 'menu') {
-        return <MenuCamera cameraRef={cameraRef} />;
+        return <OrbitCamera cameraRef={cameraRef} />;
     }
 
     if (cameraMode === 'squadron') {

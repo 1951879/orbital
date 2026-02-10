@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { Vector3, MathUtils } from 'three';
 import { useStore } from '../../../app/store/useStore';
-import { GamepadOrbitControls } from '../GamepadOrbitControls';
+import { GamepadOrbitControls } from './GamepadOrbitControls';
 
 /**
  * Menu Camera - Planet Orbit View
@@ -17,11 +17,11 @@ import { GamepadOrbitControls } from '../GamepadOrbitControls';
 import { Camera } from 'three';
 import { calculateViewOffset, isSignificantOffset } from './utils/ViewOffset';
 
-interface MenuCameraProps {
+interface OrbitCameraProps {
     cameraRef?: React.MutableRefObject<Camera | null>;
 }
 
-export const MenuCamera: React.FC<MenuCameraProps> = ({ cameraRef }) => {
+export const OrbitCamera: React.FC<OrbitCameraProps> = ({ cameraRef }) => {
     const { camera: defaultCamera } = useThree();
     // Prioritize the passed ref (for Split-Screen), fallback to Default (for Single Player)
     const camera = cameraRef?.current || defaultCamera;

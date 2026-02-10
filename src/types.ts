@@ -33,7 +33,7 @@ export type AirplaneType =
 
 export type GameMode = 'single' | 'splitscreen';
 
-export type MissionType = 'free';
+export type MissionType = 'free' | 'main_menu';
 
 export type MenuTabId = 'multiplayer' | 'hangar' | 'system' | 'config';
 
@@ -106,8 +106,8 @@ export interface AppState {
 
 
   // --- SQUADRON STATE ---
-  squadronAnchor: Vector3 | null;
-  setSquadronAnchor: (anchor: Vector3 | null) => void;
+  // squadronAnchor: Vector3 | null; 
+  // setSquadronAnchor: (anchor: Vector3 | null) => void;
 
   // Multiplayer Options
   splitDirection: 'horizontal' | 'vertical';
@@ -134,8 +134,9 @@ export interface AppState {
   setCurrentRoomId: (id: string | null) => void;
 
   // Socket Instance (Singleton)
-  socket: any | null;
-  setSocket: (socket: any | null) => void;
+  // Socket Instance (Singleton) - MOVED TO NetworkManager
+  // socket: any | null; 
+  // setSocket: (socket: any | null) => void;
 
   setOnlineStatus: (status: 'disconnected' | 'connecting' | 'connected') => void;
   setRemotePlayers: (players: RemotePlayerInfo[]) => void;

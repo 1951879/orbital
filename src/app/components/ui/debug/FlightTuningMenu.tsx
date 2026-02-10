@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { FlightTuning, Tunable } from '../../../tuning/FlightTuning';
+import { FlightTuning, Tunable } from '../../../core/tuning/FlightTuning';
 import { TuningOverlay } from './TuningOverlay';
 
 export const FlightTuningMenu: React.FC = () => {

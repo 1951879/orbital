@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import { DeviceID, DeviceManager } from '../input/DeviceManager';
 import { InputMapper, InputContext } from '../input/InputMapper';
-import { GAMEPAD_FLIGHT, GAMEPAD_MENU, KEYBOARD_FLIGHT, KEYBOARD_MENU } from '../input/definitions/DefaultProfiles';
+import { InputProfile } from '../input/InputMapper';
 
 
 
@@ -115,6 +115,13 @@ export class SessionState {
         return this._players.get(id);
     }
 
+    private static _defaultProfiles = new Map<string, InputProfile>();
+
+    public static registerDefaultProfile(deviceType: string, context: InputContext, profile: InputProfile) {
+        const key = `${deviceType}:${context}`;
+        this._defaultProfiles.set(key, profile);
+    }
+
     // --- PLAYER MANAGEMENT ---
 
     public static addPlayer(deviceId: DeviceID): EnginePlayer | undefined {
@@ -131,14 +138,14 @@ export class SessionState {
 
         const mapper = new InputMapper(deviceId);
 
-        // Load Default Profiles based on Device Type
-        if (deviceId.startsWith('keyboard')) {
-            mapper.loadProfile('FLIGHT', KEYBOARD_FLIGHT);
-            mapper.loadProfile('MENU', KEYBOARD_MENU);
-        } else if (deviceId.startsWith('gamepad')) {
-            mapper.loadProfile('FLIGHT', GAMEPAD_FLIGHT);
-            mapper.loadProfile('MENU', GAMEPAD_MENU);
-        }
+        // Load Default Profiles dynamically
+        this._defaultProfiles.forEach((profile, key) => {
+            const [pDevice, pContext] = key.split(':');
+            if (deviceId.startsWith(pDevice)) {
+                mapper.loadProfile(pContext as InputContext, profile);
+            }
+        });
+
         // Mouse? (Future)
 
         const player: EnginePlayer = {

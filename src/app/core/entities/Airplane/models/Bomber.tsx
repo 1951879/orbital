@@ -2,8 +2,8 @@
 import React from 'react';
 // Fix: Import ThreeElements to provide JSX intrinsic types
 import { ThreeElements } from '@react-three/fiber';
-import { JetExhaust } from '../effects/JetExhaust';
-import { AIRPLANE_SCALES } from '../../entities/Airplane/AirplaneConfig';
+import { JetExhaust } from '../../effects/JetExhaust';
+import { AIRPLANE_SCALES } from '../AirplaneConfig';
 
 export const Bomber: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
     const effectiveThrottle = throttle ?? 0.5;
