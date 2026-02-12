@@ -64,15 +64,23 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
             e.preventDefault();
         }
 
-        // Detect touch: either a TouchEvent or a MouseEvent synthesized from touch
-        const isTouch = e && (
-            'touches' in e ||
-            (e.nativeEvent instanceof PointerEvent && (e.nativeEvent as PointerEvent).pointerType === 'touch')
+        // Detect touch: check native event for TouchEvent or pointer type
+        const nativeEvt = e?.nativeEvent;
+        const isTouch = !!nativeEvt && (
+            'touches' in nativeEvt ||
+            (nativeEvt instanceof PointerEvent && nativeEvt.pointerType === 'touch')
         );
 
         import('@/src/engine/session/SessionState').then(({ SessionState }) => {
             if (isTouch) {
-                SessionState.addPlayer('touch', index);
+                // Max 2 local touch players per device
+                const touchCount = localParty.filter(p => p.input.type === 'touch').length;
+                if (touchCount >= 2) {
+                    console.warn('[PlayerSlot] Max 2 local touch players allowed.');
+                    return;
+                }
+                // Unique deviceId per slot so multiple touch players can join
+                SessionState.addPlayer(`touch:${index}`, index);
             } else {
                 import('@/src/app/store/useStore').then(({ useStore }) => {
                     const localParty = useStore.getState().localParty;

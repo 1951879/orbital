@@ -21,10 +21,16 @@ export interface HintMode {
 
 const NONE: HintMode = { showGamepad: false, showKeyboard: false, gamepadType: null, keyboardDevice: 'kb1' };
 
-// Heuristic: device has no precise pointer → touch-primary (no keyboard expected)
+// Heuristic: device is touch-primary (no physical keyboard expected)
+// Combines maxTouchPoints with coarse pointer check — catches phones, tablets,
+// and iPads with trackpads (which still have maxTouchPoints > 0)
 const isTouchPrimaryDevice = (): boolean => {
     if (typeof window === 'undefined') return false;
-    return window.matchMedia('(hover: none)').matches;
+    const hasTouch = navigator.maxTouchPoints > 0;
+    const hasCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    const hasNoHover = window.matchMedia('(hover: none)').matches;
+    // Touch-primary if: coarse pointer OR no hover, AND has touch
+    return hasTouch && (hasCoarsePointer || hasNoHover);
 };
 
 /**
