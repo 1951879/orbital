@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { AirplaneType } from '../../../types';
+import { AirplaneType } from '../../../../types';
 
 export const AIRPLANE_CONFIG = {
     speed: 30.0,

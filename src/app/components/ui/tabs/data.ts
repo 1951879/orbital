@@ -1,5 +1,5 @@
 
-import { AirplaneType, TerrainParams } from '../../../types';
+import { AirplaneType, TerrainParams } from '../../../../types';
 
 export const PLANES: { id: AirplaneType; name: string; desc: string }[] = [
   { id: 'interceptor', name: 'Interceptor', desc: 'Balanced multi-role fighter.' },

@@ -108,7 +108,7 @@ export class SessionState {
     }
 
     public static get players(): EnginePlayer[] {
-        return Array.from(this._players.values());
+        return Array.from(this._players.values()).sort((a, b) => a.id - b.id);
     }
 
     public static getPlayer(id: number): EnginePlayer | undefined {
@@ -124,7 +124,7 @@ export class SessionState {
 
     // --- PLAYER MANAGEMENT ---
 
-    public static addPlayer(deviceId: DeviceID): EnginePlayer | undefined {
+    public static addPlayer(deviceId: DeviceID, requestedId?: number): EnginePlayer | undefined {
         // Prevent duplicates
         for (const p of this._players.values()) {
             if (p.deviceId === deviceId) return p; // Already joined
@@ -132,9 +132,14 @@ export class SessionState {
 
         if (this._players.size >= 4) return undefined; // Full
 
-        // Find first available Scanline ID
         let id = 0;
-        while (this._players.has(id)) id++;
+        if (requestedId !== undefined) {
+            if (this._players.has(requestedId)) return undefined; // Requested slot occupied
+            id = requestedId;
+        } else {
+            // Find first available Scanline ID
+            while (this._players.has(id)) id++;
+        }
 
         const mapper = new InputMapper(deviceId);
 
@@ -208,7 +213,7 @@ export class SessionState {
 
     private static syncStore() {
         useSessionStore.setState({
-            players: Array.from(this._players.values())
+            players: Array.from(this._players.values()).sort((a, b) => a.id - b.id)
         });
     }
 }

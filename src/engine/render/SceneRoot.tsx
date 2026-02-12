@@ -11,8 +11,8 @@ import { SessionBridge } from '../../app/components/SessionBridge';
 import { SessionState } from '../session/SessionState';
 import { HTMLStencilViewportSystem } from './viewport/HTMLStencilViewportSystem.tsx';
 import { useStore } from '../../app/store/useStore';
-import { FPSMeter } from '../../app/components/ui/debug/FPSMeter';
 import { ViewportStencilLayout } from './viewport/ViewportStencilLayout';
+import { View } from '@react-three/drei';
 import { NetworkManager } from '../session/NetworkManager';
 import { FreeFlightModeInstance } from '../../app/modes/FreeFlight/FreeFlightMode';
 import { GameMode } from '../mode/GameMode';
@@ -118,30 +118,11 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
                     </HTMLStencilViewportSystem>
                 )}
 
-                {/* MENU OVERLAY SCENE handled by Mode? */}
-                {/* The "LobbySquadron" and "CameraManager" for Menu were in SceneRoot. */}
-                {/* They should ideally be part of "MainMenuMode" or "FreeFlightMode" when paused. */}
-                {/* For now, if we are paused, FreeFlightMode handles it? */}
-                {/* Current FreeFlightMode logic updates sims even if paused? */}
-                {/* If paused, we might want OrbitCamera. */}
-
-                {/* In V1, SceneRoot switched content based on `isFlying`. */}
-                {/* In V2, Mode should handle it. */}
-                {/* If Mode is FreeFlight, it handles both Playing and Paused states? */}
-                {/* Or we switch Mode to "MainMenu"? */}
-                {/* "mission" in store is 'free'. Pause is just a state. */}
-
                 {!isFlying && (
-                    // Fallback for Menu View if Mode doesn't handle it?
-                    // Or implies FreeFlightMode should have a "MenuComponent"?
-                    // For now, let's keep it simple:
-                    // If paused, we don't render ViewportSystem (Cameras).
-                    // We render a generic Menu Camera?
-                    // activeMode.SceneComponent is still rendered (background planes).
-                    // We need a Camera.
                     <activeMode.ViewportComponent player={{ id: 0 }} cameraRef={null} />
-                    // Wait, OrbitCamera logic?
                 )}
+
+                <View.Port />
 
                 {children}
             </Canvas>
@@ -154,13 +135,11 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
                 />
             )}
 
-            <div className="absolute top-4 right-4 z-50 pointer-events-none">
+            <div className="absolute inset-0 z-50 pointer-events-none">
                 <activeMode.UIComponent />
             </div>
 
-            <div className="absolute top-4 left-4 z-50 pointer-events-none">
-                <FPSMeter />
-            </div>
+
         </div>
     );
 };

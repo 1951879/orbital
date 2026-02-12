@@ -5,6 +5,7 @@ import { useGamepadMenu } from '../../../hooks/useGamepadMenu';
 import { useArcadeInput } from '../../../hooks/useArcadeInput';
 import { MissionTab } from './tabs/MissionTab';
 import { ConfigTab, CONFIG_ITEMS } from './tabs/ConfigTab';
+import { SquadronTab } from './tabs/SquadronTab';
 import { SquadronFooter } from './SquadronFooter';
 import { PRESETS } from './tabs/data';
 import { TerrainParams, MenuTabId } from '../../../types';
@@ -228,7 +229,7 @@ export const MenuOverlay: React.FC<{ onTogglePause: () => void }> = ({ onToggleP
     const isSidebarVisible = activeTab !== 'hangar';
 
     return (
-        <div className="fixed inset-0 z-40 flex flex-col pointer-events-none">
+        <div className="fixed inset-0 z-40 flex flex-col portrait:flex-col-reverse landscape:flex-col pointer-events-none">
 
             {/* HEADER */}
             <div className="h-12 md:h-16 bg-slate-950/90 backdrop-blur-xl border-b border-white/5 flex items-center px-4 md:px-8 pointer-events-auto shadow-2xl flex-shrink-0 z-50">
@@ -300,15 +301,16 @@ export const MenuOverlay: React.FC<{ onTogglePause: () => void }> = ({ onToggleP
             </div>
 
             {/* MIDDLE CONTENT */}
-            <div className="flex-1 relative flex flex-row overflow-hidden">
-                {isSidebarVisible ? (
-                    <div className="w-1/2 h-full bg-slate-950/80 backdrop-blur-xl border-r border-white/10 flex flex-col p-6 overflow-y-auto pointer-events-auto shadow-2xl relative z-10 slide-in-from-left-custom">
+            <div className="flex-1 relative flex flex-col sm:flex-row overflow-hidden">
+                {isSidebarVisible || activeTab === 'hangar' ? (
+                    <div className="w-full h-1/2 sm:w-1/2 sm:h-full bg-slate-950/80 backdrop-blur-xl border-t sm:border-t-0 sm:border-r border-white/10 flex flex-col p-6 overflow-y-auto pointer-events-auto shadow-2xl relative z-10 slide-in-from-left-custom">
                         {activeTab === 'multiplayer' && (
                             <MissionTab
                                 focusIndex={focusIndex}
                             />
                         )}
                         {activeTab === 'config' && <ConfigTab focusIndex={focusIndex} />}
+                        {activeTab === 'hangar' && <SquadronTab />}
                     </div>
                 ) : (
                     <div className="w-full h-full pointer-events-none" />

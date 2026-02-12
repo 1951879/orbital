@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { SceneRoot } from './engine/render/SceneRoot';
 import { UI } from './app/components/ui/UI';
 import { FlightTuningMenu } from './app/components/ui/debug/FlightTuningMenu';
+import { FPSMeter } from './app/components/ui/debug/FPSMeter';
 
 import { SessionState } from './engine/session/SessionState';
 import { GAMEPAD_FLIGHT, GAMEPAD_MENU, KEYBOARD_FLIGHT, KEYBOARD_MENU } from './app/core/input/DefaultProfiles';
@@ -23,6 +24,7 @@ const App: React.FC = () => {
       </div>
       {/* Flight Tuning Menu (High Z-Index, Pointer Events Auto) */}
       <FlightTuningMenu />
+      <FPSMeter />
     </div>
   );
 };

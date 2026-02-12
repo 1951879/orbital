@@ -269,8 +269,8 @@ export class AirplaneSim {
             // COLLISION!
             if (!wasGrounded) {
                 const diff = maxRequiredAltitude - (minAllowedAltitude - SAFETY_BUFFER);
-                console.log(`[COLLISION] Type: ${this.type} | Alt: ${this.altitude.toFixed(2)} | MinAllowed: ${minAllowedAltitude.toFixed(2)} | Alloc: ${diff.toFixed(2)}`);
-                console.log(`[COLLISION] Pos: ${this.position.x.toFixed(1)}, ${this.position.y.toFixed(1)}, ${this.position.z.toFixed(1)}`);
+                // console.log(`[COLLISION] Type: ${this.type} | Alt: ${this.altitude.toFixed(2)} | MinAllowed: ${minAllowedAltitude.toFixed(2)} | Alloc: ${diff.toFixed(2)}`);
+                // console.log(`[COLLISION] Pos: ${this.position.x.toFixed(1)}, ${this.position.y.toFixed(1)}, ${this.position.z.toFixed(1)}`);
             }
             this.altitude = minAllowedAltitude;
             this.isGrounded = true;

@@ -1,35 +1,22 @@
 import React from 'react';
 import { GameMode } from '../../../engine/mode/GameMode';
-import { SurfaceSquadron } from './SurfaceSquadron';
-import { MenuOverlay } from '../../components/ui/MenuOverlay';
-import { OrbitCamera } from '../../core/cameras/OrbitCamera';
-import { SunLight } from '../../core/env/SunLight';
-import { BlueprintSphere } from '../../core/env/BlueprintSphere';
+import { MainMenuContainer } from './ui/MainMenuContainer';
+import { SessionState } from '../../../engine/session/SessionState';
+import { MAIN_MENU_PROFILE } from './MainMenuInput';
 import { useStore } from '../../store/useStore';
 
 // --- REACT COMPONENTS ---
 
 const MainMenuScene: React.FC = () => {
-    return (
-        <>
-            <SunLight />
-            <BlueprintSphere />
-            <SurfaceSquadron />
-        </>
-    );
+    return null; // No 3D Scene for Menu (HTML Only)
 };
 
 const MainMenuUI: React.FC = () => {
-    // We pass a no-op togglePause because in MainMenuMode, "Pause" doesn't really exist in the same way.
-    // The Menu IS the mode. But MenuOverlay expects it.
-    // Actually, in MainMenuMode, "Resume" probably shouldn't be an option unless we have a 'lastMission' state?
-    // But for now, the equivalent of "Toggle Pause" in Main Menu might be "Launch" if they hit Start?
-    // Let's just pass a no-op or handle it in MenuOverlay.
-    return <MenuOverlay onTogglePause={() => { }} />;
+    return <MainMenuContainer />;
 };
 
 const MainMenuViewport: React.FC<{ cameraRef: any }> = ({ cameraRef }) => {
-    return <OrbitCamera cameraRef={cameraRef} />;
+    return null; // No Viewport/Camera needed
 };
 
 // --- MODE LOGIC CLASS ---
@@ -43,19 +30,16 @@ export class MainMenuModeLogic implements GameMode {
 
     init() {
         console.log('[MainMenuMode] Init');
-        // Reset any game state if needed?
-        // Ensure "isPaused" is true?
-        // Actually, "isPaused" is a bit ambiguous now.
-        // If we are in MainMenuMode, are we "Paused"?
-        // Technically "isPaused" controls the Menu Overlay visibility in FreeFlight.
-        // In MainMenuMode, the overlay is ALWAYS visible (via UIComponent).
-        // So we might want `isPaused = false` so the engine runs, but the Overlay is rendered by UIComponent.
-        // OR `isPaused` just means "Physics Paused".
+        useStore.getState().setIsPaused(true); // Keep physics paused
+        // Reset Mission state if returning from game
+        useStore.getState().setMission('main_menu');
 
-        // Let's set isPaused = true to stop physics/input from doing weird things if they leak?
-        // But SurfaceSquadron has animations.
+        // Register Input Profile
+        SessionState.registerDefaultProfile('gamepad', 'MENU', MAIN_MENU_PROFILE);
+        SessionState.registerDefaultProfile('keyboard', 'MENU', MAIN_MENU_PROFILE);
 
-        useStore.getState().setIsPaused(true);
+        // Force Context to MENU
+        SessionState.setContextForAll('MENU');
     }
 
     dispose() {
@@ -63,8 +47,7 @@ export class MainMenuModeLogic implements GameMode {
     }
 
     update(dt: number) {
-        // Visual updates only (Camera, primitive animations)
-        // No physics step needed for the Hangar (unless we add physics props)
+        // Animation updates
     }
 }
 

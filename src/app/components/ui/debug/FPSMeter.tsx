@@ -44,16 +44,16 @@ export const FPSMeter: React.FC = () => {
     const currentFps = history[history.length - 1];
 
     return (
-        <div className="absolute top-16 left-1 bg-black/50 p-1 rounded z-50 pointer-events-none select-none shadow-lg flex flex-col items-center group">
+        <div className="fixed z-[10000] top-0 left-0 bg-black border border-white/10 p-1 rounded pointer-events-auto select-none shadow-lg flex flex-col items-center group">
             <svg width="60" height="30" className="overflow-hidden">
                 <polyline
                     fill="none"
                     stroke={currentFps < 30 ? "#ef4444" : "#4ade80"}
-                    strokeWidth="2"
+                    strokeWidth="3"
                     points={points}
                 />
             </svg>
-            <span className="text-[10px] font-mono font-bold text-white/50 absolute bottom-[2px] right-[2px] min-w-[2ch] text-right pointer-events-none group-hover:opacity-100 opacity-50">{currentFps}</span>
+            <span className="text-[10px] font-mono font-bold text-white absolute bottom-[2px] right-[2px] min-w-[2ch] text-right pointer-events-none group-hover:opacity-100 opacity-100">{currentFps}</span>
         </div>
     );
 };

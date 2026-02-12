@@ -1,5 +1,5 @@
 
-import { InputProfile } from '../InputMapper';
+import { InputProfile } from '../../../engine/input/InputMapper';
 
 // --- GAMEPAD PROFILES ---
 

@@ -89,9 +89,8 @@ export const UI: React.FC = () => {
 
                 {/* --- MENU OVERLAY (PAUSED) --- */}
                 {/* Don't show menu during game over screens, let the specialized overlays handle it */}
-                {isPaused && (
-                    <MenuOverlay onTogglePause={handleTogglePause} />
-                )}
+                {/* --- MENU OVERLAY REMOVED --- */}
+                {/* Menu Overlay is now handled by the active GameMode's UIComponent */}
 
                 {/* --- DYNAMIC HUD & CONTROLS GRID --- */}
                 {/* This container replicates the Viewport layout so HUDs align perfectly */}
@@ -113,7 +112,7 @@ export const UI: React.FC = () => {
 
                         return (
                             <div key={pilot.id} className="relative w-full h-full overflow-hidden">
-                                {!isPaused && (
+                                {!isPaused && useStore.getState().mission !== 'main_menu' && (
                                     <>
                                         {/* STANDARD HUD */}
                                         <div className="absolute z-10 transition-all duration-300" style={hudStyle}>
