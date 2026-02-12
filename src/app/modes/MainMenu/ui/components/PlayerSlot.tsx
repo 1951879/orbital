@@ -7,7 +7,7 @@ import { AirplaneGeometry } from '@/src/app/core/entities/Airplane/models/Airpla
 import { PLANES } from '@/src/app/components/ui/tabs/data';
 import { useSlotInput } from '../../hooks/useSlotInput';
 import { GamepadButton } from '@/src/app/core/ui/GamepadIcons';
-import { useGamepadDetector } from '@/src/app/core/ui/useGamepadDetector';
+import { useSlotHints } from '../../hooks/useInputHints';
 
 // --- CONTROLS COMPONENT ---
 const SlotControls: React.FC<{ gamepadIndex: number }> = ({ gamepadIndex }) => {
@@ -55,20 +55,7 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
     const localParty = useStore(state => state.localParty);
     const updatePilot = useStore(state => state.updatePilot);
     const pilot = localParty.find(p => p.id === index);
-
-    // Determine target gamepad index:
-    // - If pilot exists & uses gamepad -> Use their index.
-    // - If pilot doesn't exist (Empty Slot) -> Use undefined (Defaults to Leader/Global for Join prompt).
-    // - If pilot exists & uses keyboard -> Use undefined (We'll force hide hints anyway).
-    const targetGpIndex = (pilot && pilot.input.type === 'gamepad') ? pilot.input.gamepadIndex : undefined;
-
-    const detectedType = useGamepadDetector(targetGpIndex);
-
-    // Visibility Logic:
-    // - Empty Slot: Show hints if any/leader gamepad detected.
-    // - Occupied: Show hints ONLY if pilot is using gamepad.
-    const hasGamepads = !pilot ? !!detectedType : (pilot.input.type === 'gamepad' && !!detectedType);
-    const gamepadType = hasGamepads ? detectedType : null;
+    const hints = useSlotHints(pilot);
     const isActive = !!pilot;
 
     const handleJoin = (e?: React.MouseEvent | React.TouchEvent) => {
@@ -77,21 +64,23 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
             e.preventDefault();
         }
 
+        // Detect touch: either a TouchEvent or a MouseEvent synthesized from touch
+        const isTouch = e && (
+            'touches' in e ||
+            (e.nativeEvent instanceof PointerEvent && (e.nativeEvent as PointerEvent).pointerType === 'touch')
+        );
+
         import('@/src/engine/session/SessionState').then(({ SessionState }) => {
-            // If manual click, check existing parties to pick kb1 vs kb2
-            // Actually, simplest is to try 'kb1' if not taken, else 'kb2'
-            // But wait, we can just use the same logic as Footer if we want consistent manual click behavior
-            // For now, let's default to 'kb1' if manual click on Slot 1? 
-            // Or better:
-            // If manual click, treat same as Footer logic:
-            import('@/src/app/store/useStore').then(({ useStore }) => {
-                const localParty = useStore.getState().localParty;
-                const hasKb1 = localParty.some(p => p.input.deviceId === 'kb1');
-                const deviceId = hasKb1 ? 'kb2' : 'kb1';
-                // If it's a gamepad click (A), it sends the gamepad ID. 
-                // But this handler is for mouse click or generic.
-                SessionState.addPlayer(deviceId, index);
-            });
+            if (isTouch) {
+                SessionState.addPlayer('touch', index);
+            } else {
+                import('@/src/app/store/useStore').then(({ useStore }) => {
+                    const localParty = useStore.getState().localParty;
+                    const hasKb1 = localParty.some(p => p.input.deviceId === 'kb1');
+                    const deviceId = hasKb1 ? 'kb2' : 'kb1';
+                    SessionState.addPlayer(deviceId, index);
+                });
+            }
         });
     };
 
@@ -138,17 +127,18 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
                 </div>
-                {/* Text only if gamepad detected OR if it's P1 (Keyboard Host) */}
-                {hasGamepads ? (
+                {hints.showGamepad ? (
                     <span className="text-sm font-bold uppercase text-white/40 group-hover:text-white tracking-widest flex items-center gap-2">
-                        <GamepadButton type={gamepadType} button="A" /> to Join
+                        <GamepadButton type={hints.gamepadType} button="A" /> to Join
                     </span>
-                ) : (
+                ) : hints.showKeyboard ? (
                     <span className="text-sm font-bold uppercase text-white/40 group-hover:text-white tracking-widest flex items-center gap-2">
                         <span className=" px-1 border border-white/40 rounded flex items-center justify-center text-xs">F</span>
                         <span className="text-[10px]">or</span>
                         <span className=" px-1 border border-white/40 rounded flex items-center justify-center text-xs">ENTER</span>
                     </span>
+                ) : (
+                    <span className="text-sm font-bold uppercase text-white/40 group-hover:text-white tracking-widest">Tap to Join</span>
                 )}
             </div>
         );
@@ -182,15 +172,15 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
                 <div className="absolute top-2 right-2 flex items-center gap-2 z-10">
                     {isActive && (
                         <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">
-                            {hasGamepads ? (
+                            {hints.showGamepad ? (
                                 <>
-                                    <GamepadButton type={gamepadType} button="B" />
+                                    <GamepadButton type={hints.gamepadType} button="B" />
                                     <span className="text-[9px] font-bold text-white uppercase shadow-black drop-shadow-md">Hold</span>
                                 </>
-                            ) : pilot.input.type !== 'touch' ? (
+                            ) : hints.showKeyboard ? (
                                 <>
                                     <span className="w-4 h-4 border border-white rounded flex items-center justify-center text-[9px] text-white">
-                                        {pilot.input.deviceId === 'kb2' ? ']' : 'R'}
+                                        {hints.keyboardDevice === 'kb2' ? ']' : 'R'}
                                     </span>
                                     <span className="text-[9px] font-bold text-white uppercase shadow-black drop-shadow-md">Hold</span>
                                 </>
@@ -211,11 +201,11 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
                 {/* OVERLAY: PLANE SELECTION */}
                 <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between z-10">
                     <div className="flex items-center gap-1">
-                        {hasGamepads ? (
-                            <GamepadButton type={gamepadType} button="DPadLeft" />
-                        ) : pilot.input.type !== 'touch' ? (
+                        {hints.showGamepad ? (
+                            <GamepadButton type={hints.gamepadType} button="DPadLeft" />
+                        ) : hints.showKeyboard ? (
                             <span className="w-4 h-4 border border-white/70 rounded flex items-center justify-center text-[8px] text-white">
-                                {pilot.input.deviceId === 'kb2' ? 'L' : 'A'}
+                                {hints.keyboardDevice === 'kb2' ? 'L' : 'A'}
                             </span>
                         ) : null}
                         <button
@@ -239,11 +229,11 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                             </svg>
                         </button>
-                        {hasGamepads ? (
-                            <GamepadButton type={gamepadType} button="DPadRight" />
-                        ) : pilot.input.type !== 'touch' ? (
+                        {hints.showGamepad ? (
+                            <GamepadButton type={hints.gamepadType} button="DPadRight" />
+                        ) : hints.showKeyboard ? (
                             <span className="w-4 h-4 border border-white/70 rounded flex items-center justify-center text-[8px] text-white">
-                                {pilot.input.deviceId === 'kb2' ? "'" : 'D'}
+                                {hints.keyboardDevice === 'kb2' ? "'" : 'D'}
                             </span>
                         ) : null}
                     </div>
@@ -263,11 +253,11 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
                     onClick={handleReady}
                 >
                     <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${isReady ? 'text-green-400' : 'text-slate-500 group-hover:text-slate-300'} flex items-center gap-2`}>
-                        {hasGamepads ? (
-                            <GamepadButton type={gamepadType} button="A" />
-                        ) : pilot.input.type !== 'touch' ? (
+                        {hints.showGamepad ? (
+                            <GamepadButton type={hints.gamepadType} button="A" />
+                        ) : hints.showKeyboard ? (
                             <span className="w-auto min-w-[16px] h-4 border border-current rounded flex items-center justify-center text-[9px] px-1">
-                                {pilot.input.deviceId === 'kb2' ? 'ENTER' : 'F'}
+                                {hints.keyboardDevice === 'kb2' ? 'ENTER' : 'F'}
                             </span>
                         ) : null}
                         READY

@@ -3,7 +3,7 @@ import { useStore } from '../../../../store/useStore';
 import { useMainMenuStore } from '../../MainMenuStore';
 import { Button } from '../kit/Button';
 import { GamepadButton } from '@/src/app/core/ui/GamepadIcons';
-import { useGamepadDetector } from '@/src/app/core/ui/useGamepadDetector';
+import { useHostHints } from '../../hooks/useInputHints';
 
 export const Header: React.FC = () => {
     const localParty = useStore((state) => state.localParty);
@@ -13,17 +13,9 @@ export const Header: React.FC = () => {
     const setScreen = useMainMenuStore((state) => state.setScreen);
 
     const host = localParty.find(p => p.id === 0);
-    const hostInputType = host?.input.type || 'keyboard';
     const hostDevice = host?.input.deviceId || 'kb1';
 
-    // If Host is on Gamepad, detect THAT gamepad.
-    // If Host is on Keyboard, force null (don't show gamepad hints).
-    const targetGpIndex = hostInputType === 'gamepad' ? host?.input.gamepadIndex : undefined;
-    const detectedGamepadType = useGamepadDetector(targetGpIndex);
-
-    // Only show Gamepad Hints if Host is actually using a Gamepad
-    const showGamepadHints = hostInputType === 'gamepad' && !!detectedGamepadType;
-
+    const hints = useHostHints();
     const [isFullscreen, setIsFullscreen] = useState(false);
 
     useEffect(() => {
@@ -87,13 +79,13 @@ export const Header: React.FC = () => {
             <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
                 {host ? (
                     <>
-                        {showGamepadHints ? (
-                            <GamepadButton type={detectedGamepadType} button="LB" />
-                        ) : (
+                        {hints.showGamepad ? (
+                            <GamepadButton type={hints.gamepadType} button="LB" />
+                        ) : hints.showKeyboard ? (
                             <span className="w-5 h-5 border border-slate-500 rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
                                 {hostDevice === 'kb2' ? 'O' : 'Q'}
                             </span>
-                        )}
+                        ) : null}
                         <div className="flex items-center gap-1">
                             {[
                                 { id: 'squadron', label: 'SQUADRON' },
@@ -115,13 +107,13 @@ export const Header: React.FC = () => {
                                 );
                             })}
                         </div>
-                        {showGamepadHints ? (
-                            <GamepadButton type={detectedGamepadType} button="RB" />
-                        ) : (
+                        {hints.showGamepad ? (
+                            <GamepadButton type={hints.gamepadType} button="RB" />
+                        ) : hints.showKeyboard ? (
                             <span className="w-5 h-5 border border-slate-500 rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
                                 {hostDevice === 'kb2' ? '[' : 'E'}
                             </span>
-                        )}
+                        ) : null}
                     </>
                 ) : (
                     // No Host -> Just show Tabs (Passive)

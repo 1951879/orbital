@@ -105,7 +105,9 @@ export const useStore = create<AppState>((set, get) => ({
         let type: InputType = 'gamepad';
         let gpIndex = -1;
 
-        if (deviceId === 'keyboard' || deviceId === 'keyboard_wasd') {
+        if (deviceId === 'touch') {
+            type = 'touch';
+        } else if (deviceId === 'keyboard' || deviceId === 'keyboard_wasd') {
             type = 'keyboard_wasd';
         } else if (deviceId === 'keyboard_arrows') {
             type = 'keyboard_arrows' as InputType; // Ensure InputType definition supports this?

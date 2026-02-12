@@ -57,38 +57,57 @@ export const RtIcon = ({ className = "" }: { className?: string }) => (
     <div className={`${baseClass} w-8 h-5 rounded-md text-xs border border-white/20 bg-slate-800 text-white ${className}`}>RT</div>
 );
 
-// D-Pad
-export const DPadUpIcon = ({ className = "" }: { className?: string }) => (
-    <div className={`${baseClass} w-4 h-4 bg-slate-800 border-slate-600 text-white rounded-[2px] ${className}`}>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-            <path d="M12 19V5M5 12l7-7 7 7" strokeLinecap="round" strokeLinejoin="round" />
+// Xbox D-Pad (Dish + Thick Cross)
+const XboxDPad = ({ active = 'none', className = "" }: { active?: 'up' | 'down' | 'left' | 'right' | 'none', className?: string }) => (
+    <div className={`${baseClass} w-5 h-5 text-white ${className}`}>
+        <svg viewBox="0 0 24 24" fill="none">
+            {/* Dish Background */}
+            <circle cx="12" cy="12" r="11" className="fill-slate-800" />
+
+            {/* Base Cross (Inactive) */}
+            <path d="M9 3H15V9H21V15H15V21H9V15H3V9H9V3Z" className="fill-slate-600" />
+
+            {/* Active Highlights (Shorter - only the limb) */}
+            {active === 'up' && <path d="M9 3H15V10H9V3Z" className="fill-white" />}
+            {active === 'down' && <path d="M9 14H15V21H9V14Z" className="fill-white" />}
+            {active === 'left' && <path d="M3 9H10V15H3V9Z" className="fill-white" />}
+            {active === 'right' && <path d="M14 9H21V15H14V9Z" className="fill-white" />}
         </svg>
     </div>
 );
 
-export const DPadDownIcon = ({ className = "" }: { className?: string }) => (
-    <div className={`${baseClass} w-4 h-4 bg-slate-800 border-slate-600 text-white rounded-[2px] ${className}`}>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-            <path d="M12 5v14M19 12l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    </div>
-);
+// PlayStation D-Pad (4 Separate Mitered Buttons)
+const PlayStationDPad = ({ active = 'none', className = "" }: { active?: 'up' | 'down' | 'left' | 'right' | 'none', className?: string }) => {
+    // Geometry: 5-sided polygons meeting at miters with a gap
+    // Canvas 24x24. Center 12,12.
+    // Gap causes points to retract from center.
+    // Up: Top(8,2-16,2), Legs(16,6-8,6), Point(12,10)
 
-export const DPadLeftIcon = ({ className = "" }: { className?: string }) => (
-    <div className={`${baseClass} w-4 h-4 bg-slate-800 border-slate-600 text-white rounded-[2px] ${className}`}>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-            <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    </div>
-);
+    const upPath = "M8 2 H16 L16 6 L12 10 L8 6 Z";
+    const downPath = "M8 22 H16 L16 18 L12 14 L8 18 Z";
+    const leftPath = "M2 8 V16 L6 16 L10 12 L6 8 Z";
+    const rightPath = "M22 8 V16 L18 16 L14 12 L18 8 Z";
 
-export const DPadRightIcon = ({ className = "" }: { className?: string }) => (
-    <div className={`${baseClass} w-4 h-4 bg-slate-800 border-slate-600 text-white rounded-[2px] ${className}`}>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-            <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    </div>
-);
+    const inactiveClass = "fill-slate-700 stroke-slate-900 stroke-[0.5]";
+    const activeClass = "fill-white stroke-slate-900 stroke-[0.5]";
+
+    return (
+        <div className={`${baseClass} w-5 h-5 text-white ${className}`}>
+            <svg viewBox="0 0 24 24">
+                <path d={upPath} className={active === 'up' ? activeClass : inactiveClass} />
+                <path d={downPath} className={active === 'down' ? activeClass : inactiveClass} />
+                <path d={leftPath} className={active === 'left' ? activeClass : inactiveClass} />
+                <path d={rightPath} className={active === 'right' ? activeClass : inactiveClass} />
+            </svg>
+        </div>
+    );
+};
+
+export const DPadUpIcon = ({ className = "" }: { className?: string }) => <XboxDPad active="up" className={className} />;
+export const DPadDownIcon = ({ className = "" }: { className?: string }) => <XboxDPad active="down" className={className} />;
+export const DPadLeftIcon = ({ className = "" }: { className?: string }) => <XboxDPad active="left" className={className} />;
+export const DPadRightIcon = ({ className = "" }: { className?: string }) => <XboxDPad active="right" className={className} />;
+
 // PlayStation Face Buttons
 export const CrossIcon = ({ className = "" }: { className?: string }) => (
     <div className={`${baseClass} ${roundClass} bg-blue-600 border-blue-400 text-white ${className}`}>
@@ -157,10 +176,10 @@ export const GamepadButton: React.FC<GamepadButtonProps> = ({ type, button, clas
         case 'RT': return isPs ? <R2Icon className={className} /> : <RtIcon className={className} />;
         case 'Start': return isPs ? <StartIcon className={className} /> : <StartIcon className={className} />; // TODO: Options icon for PS
         case 'Select': return isPs ? <SelectIcon className={className} /> : <SelectIcon className={className} />; // TODO: Share icon for PS
-        case 'DPadUp': return <DPadUpIcon className={className} />;
-        case 'DPadDown': return <DPadDownIcon className={className} />;
-        case 'DPadLeft': return <DPadLeftIcon className={className} />;
-        case 'DPadRight': return <DPadRightIcon className={className} />;
+        case 'DPadUp': return isPs ? <PlayStationDPad active="up" className={className} /> : <XboxDPad active="up" className={className} />;
+        case 'DPadDown': return isPs ? <PlayStationDPad active="down" className={className} /> : <XboxDPad active="down" className={className} />;
+        case 'DPadLeft': return isPs ? <PlayStationDPad active="left" className={className} /> : <XboxDPad active="left" className={className} />;
+        case 'DPadRight': return isPs ? <PlayStationDPad active="right" className={className} /> : <XboxDPad active="right" className={className} />;
         default: return null;
     }
 };
