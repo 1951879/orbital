@@ -1,8 +1,7 @@
 import React, { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Vector3, MathUtils, Vector2 } from 'three';
-import { AirplaneSim } from '../../app/core/entities/Airplane/AirplaneSim';
-import { useStore } from '../../app/store/useStore'; // For params if needed
+import { ISimObject } from '../sim/ISimObject';
 
 // Configuration for the Chase Camera
 const CAM_CONFIG = {
@@ -14,7 +13,7 @@ const CAM_CONFIG = {
 };
 
 interface CameraDirectorProps {
-    sim: AirplaneSim;
+    sim: ISimObject;
     inverted?: boolean;
 }
 

@@ -44,9 +44,9 @@ graph TD
     *   *Logic:* Shifts the world center when the player moves > 5000 units from (0,0,0) to prevent floating-point jitter.
 
 #### 1.3. Rendering (`src/engine/render/`)
-*   **SceneRoot.tsx**: The React-Three-Fiber entry point ("Bootloader").
-    *   *Responsibility:* Initializes WebGL, Physics, and Input.
-    *   *Action:* Checks `activeMode` and renders `<activeMode.SceneComponent />`.
+*   **SceneRoot.tsx**: The React-Three-Fiber entry point.
+    *   *Responsibility:* Dumb container. Initializes WebGL/Physics.
+    *   *Action:* Receives `activeMode`, `cameras`, and `config` from props. Renders `<activeMode.SceneComponent />`.
 *   **ViewportSystem/**: Handles Split-Screen logic.
     *   *Abstraction:* Takes `N` cameras from the Mode and renders them to `N` divs using Stencil/Scissor tests.
 *   **ViewSync**: Components that read from `WorldState` inside `useFrame` to update 3D objects.
@@ -95,6 +95,11 @@ interface GameMode {
   id: string; // e.g. "free_flight"
   SceneComponent: React.FC; // Renders the World
   UIComponent: React.FC;    // Renders the HUD
+  ViewportComponent?: React.FC<{ // Renders the Player View
+      player: any,
+      cameraRef: any,
+      cameras?: Record<string, React.FC<any>>
+  }>;
   update: (dt: number) => void; // Runs the Logic
   dispose: () => void; // Cleanup
 }
@@ -160,7 +165,7 @@ src/
 ├── app/
 │   ├── core/               # [Layer 2] The Assets
 │   │   ├── entities/       # Airplane, Tank
-│   │   ├── cameras/        # ChaseCamera, OrbitCamera
+│   │   ├── cameras/        # ChaseCamera, OrbitCamera (Injected)
 │   │   ├── env/            # Planet, Sun
 │   │   └── input/          # StandardProfiles
 │   │

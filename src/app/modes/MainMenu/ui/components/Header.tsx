@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../../../../store/useStore';
 import { useMainMenuStore } from '../../MainMenuStore';
 import { Button } from '../kit/Button';
-import { LbIcon, RbIcon } from '@/src/app/core/ui/GamepadIcons';
+import { GamepadButton } from '@/src/app/core/ui/GamepadIcons';
 import { useGamepadDetector } from '@/src/app/core/ui/useGamepadDetector';
 
 export const Header: React.FC = () => {
@@ -12,7 +12,17 @@ export const Header: React.FC = () => {
     const currentScreen = useMainMenuStore((state) => state.currentScreen);
     const setScreen = useMainMenuStore((state) => state.setScreen);
 
-    const hasGamepad = useGamepadDetector();
+    const host = localParty.find(p => p.id === 0);
+    const hostInputType = host?.input.type || 'keyboard';
+    const hostDevice = host?.input.deviceId || 'kb1';
+
+    // If Host is on Gamepad, detect THAT gamepad.
+    // If Host is on Keyboard, force null (don't show gamepad hints).
+    const targetGpIndex = hostInputType === 'gamepad' ? host?.input.gamepadIndex : undefined;
+    const detectedGamepadType = useGamepadDetector(targetGpIndex);
+
+    // Only show Gamepad Hints if Host is actually using a Gamepad
+    const showGamepadHints = hostInputType === 'gamepad' && !!detectedGamepadType;
 
     const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -75,29 +85,68 @@ export const Header: React.FC = () => {
 
             {/* CENTER: TAB NAVIGATION */}
             <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-                {hasGamepad && <LbIcon />}
-                <div className="flex items-center gap-1">
-                    {[
-                        { id: 'squadron', label: 'SQUADRON' },
-                        { id: 'operations', label: 'OPERATIONS' },
-                        { id: 'briefing', label: 'BRIEFING' }
-                    ].map(tab => {
-                        const isActive = currentScreen === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setScreen(tab.id as any)}
-                                className={`px-2 py-1 md:px-4 md:py-1.5 rounded text-[10px] md:text-xs font-bold uppercase transition-all ${isActive
-                                    ? 'bg-white/10 text-white shadow-[0_0_10px_rgba(255,255,255,0.2)]'
-                                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
-                                    }`}
-                            >
-                                {tab.label}
-                            </button>
-                        );
-                    })}
-                </div>
-                {hasGamepad && <RbIcon />}
+                {host ? (
+                    <>
+                        {showGamepadHints ? (
+                            <GamepadButton type={detectedGamepadType} button="LB" />
+                        ) : (
+                            <span className="w-5 h-5 border border-slate-500 rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
+                                {hostDevice === 'kb2' ? 'O' : 'Q'}
+                            </span>
+                        )}
+                        <div className="flex items-center gap-1">
+                            {[
+                                { id: 'squadron', label: 'SQUADRON' },
+                                { id: 'operations', label: 'OPERATIONS' },
+                                { id: 'briefing', label: 'BRIEFING' }
+                            ].map(tab => {
+                                const isActive = currentScreen === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setScreen(tab.id as any)}
+                                        className={`px-2 py-1 md:px-4 md:py-1.5 rounded text-[10px] md:text-xs font-bold uppercase transition-all ${isActive
+                                            ? 'bg-white/10 text-white shadow-[0_0_10px_rgba(255,255,255,0.2)]'
+                                            : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                                            }`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {showGamepadHints ? (
+                            <GamepadButton type={detectedGamepadType} button="RB" />
+                        ) : (
+                            <span className="w-5 h-5 border border-slate-500 rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
+                                {hostDevice === 'kb2' ? '[' : 'E'}
+                            </span>
+                        )}
+                    </>
+                ) : (
+                    // No Host -> Just show Tabs (Passive)
+                    <div className="flex items-center gap-1">
+                        {[
+                            { id: 'squadron', label: 'SQUADRON' },
+                            { id: 'operations', label: 'OPERATIONS' },
+                            { id: 'briefing', label: 'BRIEFING' }
+                        ].map(tab => {
+                            const isActive = currentScreen === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setScreen(tab.id as any)}
+                                    className={`px-2 py-1 md:px-4 md:py-1.5 rounded text-[10px] md:text-xs font-bold uppercase transition-all ${isActive
+                                        ? 'bg-white/10 text-white shadow-[0_0_10px_rgba(255,255,255,0.2)]'
+                                        : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                                        }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             {/* RIGHT: OPTIONS */}

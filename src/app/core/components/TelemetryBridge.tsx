@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useStore } from '../../app/store/useStore';
-import { AirplaneSim } from '../../app/core/entities/Airplane/AirplaneSim';
+import { useStore } from '../../store/useStore';
+import { AirplaneSim } from '../entities/Airplane/AirplaneSim';
 import { MathUtils, Euler } from 'three';
 
 // Bridges the gap between V2 Sim (Physics) and V1 Store (UI)

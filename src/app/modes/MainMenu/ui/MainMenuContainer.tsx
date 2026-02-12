@@ -15,6 +15,10 @@ export const MainMenuContainer: React.FC = () => {
     // Input Handling for Tab Navigation
     useEffect(() => {
         const handleInput = (playerId: number, action: string) => {
+            // Only Host (Player 0) (or P1) controls the tabs
+            // TODO: Better "Is Host" check? For now, ID 0 is host.
+            if (playerId !== 0) return;
+
             if (action === 'TAB_NEXT') {
                 const currentIndex = TABS.indexOf(currentScreen);
                 const nextIndex = (currentIndex + 1) % TABS.length;

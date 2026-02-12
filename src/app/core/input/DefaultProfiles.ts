@@ -40,7 +40,7 @@ export const GAMEPAD_MENU: InputProfile = {
 
 // --- KEYBOARD PROFILES ---
 
-export const KEYBOARD_FLIGHT: InputProfile = {
+export const KEYBOARD_FLIGHT_KB1: InputProfile = {
     // WASD -> Pitch/Roll
     "PITCH": [
         { deviceType: 'keyboard', key: 'KeyW', value: -1.0 },
@@ -51,21 +51,51 @@ export const KEYBOARD_FLIGHT: InputProfile = {
         { deviceType: 'keyboard', key: 'KeyD', value: 1.0 }
     ],
 
-    // Arrows -> Yaw/Throttle (Alternative Layouts can be added later)
+    // Q/E -> Yaw (Rudder)
     "YAW": [
-        { deviceType: 'keyboard', key: 'ArrowLeft', value: -1.0 },
-        { deviceType: 'keyboard', key: 'ArrowRight', value: 1.0 }
+        { deviceType: 'keyboard', key: 'KeyQ', value: -1.0 },
+        { deviceType: 'keyboard', key: 'KeyE', value: 1.0 }
     ],
 
-    // Throttle Keys (E/Q)
-    "THROTTLE_UP": [{ deviceType: 'keyboard', key: 'KeyE' }],
-    "THROTTLE_DOWN": [{ deviceType: 'keyboard', key: 'KeyQ' }],
+    // Shift/Ctrl -> Throttle
+    "THROTTLE_UP": [{ deviceType: 'keyboard', key: 'ShiftLeft' }],
+    "THROTTLE_DOWN": [{ deviceType: 'keyboard', key: 'ControlLeft' }],
 
     "FIRE": [{ deviceType: 'keyboard', key: 'Space' }],
-    "BOOST": [{ deviceType: 'keyboard', key: 'ShiftLeft' }],
-    "BRAKE": [{ deviceType: 'keyboard', key: 'ControlLeft' }],
-    "PAUSE": [{ deviceType: 'keyboard', key: 'Enter' }]
+    "BOOST": [{ deviceType: 'keyboard', key: 'Tab' }], // Moved from Shift
+    "BRAKE": [{ deviceType: 'keyboard', key: 'KeyB' }], // Explicit brake if needed
+    "PAUSE": [{ deviceType: 'keyboard', key: 'Escape' }]
 };
+
+export const KEYBOARD_FLIGHT_KB2: InputProfile = {
+    // P/L/;/' -> Pitch/Roll
+    "PITCH": [
+        { deviceType: 'keyboard', key: 'KeyP', value: -1.0 },
+        { deviceType: 'keyboard', key: 'Semicolon', value: 1.0 }
+    ],
+    "ROLL": [
+        { deviceType: 'keyboard', key: 'KeyL', value: -1.0 },
+        { deviceType: 'keyboard', key: 'Quote', value: 1.0 }
+    ],
+
+    // O/[ -> Yaw
+    "YAW": [
+        { deviceType: 'keyboard', key: 'KeyO', value: -1.0 },
+        { deviceType: 'keyboard', key: 'BracketLeft', value: 1.0 }
+    ],
+
+    // Right Shift/Ctrl -> Throttle
+    "THROTTLE_UP": [{ deviceType: 'keyboard', key: 'ShiftRight' }],
+    "THROTTLE_DOWN": [{ deviceType: 'keyboard', key: 'ControlRight' }],
+
+    "FIRE": [{ deviceType: 'keyboard', key: 'Enter' }],
+    "BOOST": [{ deviceType: 'keyboard', key: 'Backspace' }],
+    "BRAKE": [{ deviceType: 'keyboard', key: 'Backslash' }],
+    "PAUSE": [{ deviceType: 'keyboard', key: 'Delete' }]
+};
+
+// Deprecated: Alias to P1 for compatibility until full migration
+export const KEYBOARD_FLIGHT = KEYBOARD_FLIGHT_KB1;
 
 export const KEYBOARD_MENU: InputProfile = {
     "NAV_UP": [{ deviceType: 'keyboard', key: 'ArrowUp' }, { deviceType: 'keyboard', key: 'KeyW' }],
@@ -76,5 +106,5 @@ export const KEYBOARD_MENU: InputProfile = {
     "SELECT": [{ deviceType: 'keyboard', key: 'Space' }], // Removed Enter conflict
     "BACK": [{ deviceType: 'keyboard', key: 'Backspace' }],
     "LEAVE_SESSION": [{ deviceType: 'keyboard', key: 'Backspace' }],
-    "PAUSE": [{ deviceType: 'keyboard', key: 'Enter' }] // Changed from Escape
+    "PAUSE": [{ deviceType: 'keyboard', key: 'Escape' }] // Changed from Escape
 };

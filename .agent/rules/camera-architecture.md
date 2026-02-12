@@ -1,8 +1,8 @@
 # Camera Architecture Rules
 
-## Core Principle: Separate Files Per Camera Mode
+## Core Principle: Injection-Based Camera System
 
-Camera modes MUST be implemented as **separate, focused components**. Do NOT create monolithic camera controllers with mode-switching state machines.
+Cameras are implemented as **separate, focused components** in the App Layer and injected into the Engine. The Engine does NOT know about specific camera modes.
 
 ---
 
@@ -20,7 +20,7 @@ src/engine/render/
 │       ├── CameraUtils.ts       # Shared math (easing, lerp, etc.)
 │       ├── ViewOffset.ts        # UI compensation logic
 │       └── Transitions.ts       # Transition easing functions
-└── CameraManager.tsx            # Mode switching coordinator
+
 ```
 
 ---
@@ -43,36 +43,30 @@ Extract common code to `cameras/utils/`:
 - Camera lerp/smoothing helpers
 - Transition state management
 
-### 4. **Mode Switching**
-Use a dedicated `CameraManager.tsx` component:
-```tsx
-// ✅ CORRECT
-export const CameraManager: React.FC = () => {
-  const mode = useStore(s => s.cameraMode);
-  
-  if (mode === 'chase') return <ChaseCamera />;
-  if (mode === 'squadron') return <SquadronCamera />;
-  if (mode === 'orbit') return <OrbitCamera />;
-};
-```
+### 4. **Mode Switching (Injection)**
+Instead of a `CameraManager`, the App Layer maps names to components and injects them into the Engine:
 
 ```tsx
-// ❌ WRONG - Don't do this
-export const CameraController = () => {
-  const mode = useStore(s => s.cameraMode);
-  
-  useFrame(() => {
-    if (mode === 'chase') { /* 100 lines */ }
-    else if (mode === 'squadron') { /* 100 lines */ }
-    else if (mode === 'orbit') { /* 100 lines */ }
-  });
+// App.tsx
+const CAMERAS = {
+  'chase': ChaseCamera,
+  'orbit': OrbitCamera,
+  'squadron': OrbitCamera
 };
+
+<SceneRoot cameras={CAMERAS} ... />
+```
+
+The Engine simply renders:
+```tsx
+// SceneRoot.tsx
+<activeMode.ViewportComponent cameras={cameras} ... />
 ```
 
 ### 5. **Layer Separation**
 Follow Diamond Architecture:
-- **Engine Layer** (`src/engine/render/cameras/`): Generic, reusable cameras
-- **App Layer** (`src/app/gamemodes/*/`): Game-specific camera behaviors
+- **Engine Layer** (`src/engine/render/`): Generic Viewport System (receives cameras)
+- **App Layer** (`src/app/core/cameras/`): Specific camera implementations
 
 Example:
 ```

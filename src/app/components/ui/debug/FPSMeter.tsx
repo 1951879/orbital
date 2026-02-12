@@ -1,5 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
+import { DebugConfig } from './DebugConfig';
 
 export const FPSMeter: React.FC = () => {
     const [history, setHistory] = useState<number[]>(new Array(30).fill(60));
@@ -42,6 +43,8 @@ export const FPSMeter: React.FC = () => {
     }).join(' ');
 
     const currentFps = history[history.length - 1];
+
+    if (!DebugConfig.showFPSMeter) return null;
 
     return (
         <div className="fixed z-[10000] top-0 left-0 bg-black border border-white/10 p-1 rounded pointer-events-auto select-none shadow-lg flex flex-col items-center group">

@@ -28,7 +28,7 @@ export const useSessionStore = create<SessionStateModel>(() => ({
 export class SessionState {
     private static _players: Map<number, EnginePlayer> = new Map();
     private static _leaveTimers: Map<number, number> = new Map(); // PlayerID -> Time Held
-    private static _pauseLocks: Map<number, boolean> = new Map(); // PlayerID -> Was Pressed
+    private static _buttonLocks: Map<number, Set<string>> = new Map(); // PlayerID -> Set<ActionName>
     private static _inputListeners: Set<(playerId: number, action: string) => void> = new Set();
 
     public static onInput(callback: (playerId: number, action: string) => void) {
@@ -64,46 +64,61 @@ export class SessionState {
             }
         }
 
-        // 2. Poll for Leave (Assigned Gamepads) - Hold 'LEAVE_SESSION' (B)
+        // 2. Poll for Inputs
         this._players.forEach(p => {
-            const isHolding = p.input.getButton('LEAVE_SESSION'); // Same as BACK
-            let current = this._leaveTimers.get(p.id) || 0;
+            // A. Handle LEAVE_SESSION (Hold) & BACK (Tap) - Special Case
+            const isHoldingLeave = p.input.getButton('LEAVE_SESSION');
+            let currentLeaveTime = this._leaveTimers.get(p.id) || 0;
 
-            if (isHolding) {
-                // Increment Hold Timer
-                current += dt;
-                this._leaveTimers.set(p.id, current);
+            if (isHoldingLeave) {
+                currentLeaveTime += dt;
+                this._leaveTimers.set(p.id, currentLeaveTime);
 
-                if (current > 2.0) { // 2 Seconds Hold -> LEAVE
-                    // Only trigger once
-                    if (current - dt <= 2.0) {
+                if (currentLeaveTime > 1.0) { // 1 Second Hold -> LEAVE
+                    if (currentLeaveTime - dt <= 1.0) {
                         console.log(`[Session] Player ${p.id} Left via Hold`);
                         this.removePlayer(p.id);
-                        this._leaveTimers.set(p.id, 0); // Reset
+                        this._leaveTimers.set(p.id, 0);
                     }
                 }
             } else {
-                // Released?
-                if (current > 0) {
-                    // Was holding
-                    if (current < 0.5) {
+                if (currentLeaveTime > 0) {
+                    // Released
+                    if (currentLeaveTime < 0.5) {
                         // Short Press -> Tap (BACK)
                         this._inputListeners.forEach(cb => cb(p.id, 'BACK'));
                     }
-                    // Reset
                     this._leaveTimers.set(p.id, 0);
                 }
             }
 
-            // 3. Poll for PAUSE (Start / Enter)
-            const isPausePressed = p.input.getButton('PAUSE');
-            const wasPausePressed = this._pauseLocks.get(p.id) || false;
-
-            if (isPausePressed && !wasPausePressed) {
-                console.log(`[Session] Player ${p.id} requested PAUSE`);
-                this._inputListeners.forEach(cb => cb(p.id, 'PAUSE'));
+            // B. Generic Action Polling (Pressed Check)
+            const actions = p.input.getActions(this._currentContext);
+            let playerLocks = this._buttonLocks.get(p.id);
+            if (!playerLocks) {
+                playerLocks = new Set();
+                this._buttonLocks.set(p.id, playerLocks);
             }
-            this._pauseLocks.set(p.id, isPausePressed);
+
+            for (const action of actions) {
+                // Skip special handling actions
+                if (action === 'LEAVE_SESSION' || action === 'BACK') continue;
+
+                const isPressed = p.input.getButton(action);
+                const wasPressed = playerLocks.has(action);
+
+                if (isPressed && !wasPressed) {
+                    // Rising Edge -> Dispatch
+                    // console.log(`[Session] Action ${action} dispatch for Player ${p.id}`);
+                    this._inputListeners.forEach(cb => cb(p.id, action));
+                }
+
+                if (isPressed) {
+                    playerLocks.add(action);
+                } else {
+                    playerLocks.delete(action);
+                }
+            }
         });
     }
 

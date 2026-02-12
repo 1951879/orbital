@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { Vector3 } from 'three';
-import { TelemetryBridge } from '../../../engine/render/TelemetryBridge';
+import { TelemetryBridge } from '../../core/components/TelemetryBridge';
 import { GameMode } from '../../../engine/mode/GameMode';
 import { SessionState } from '../../../engine/session/SessionState';
 import { useFreeFlightStore } from './useFreeFlightStore';
@@ -8,7 +8,7 @@ import { BlueprintSphere } from '../../core/env/BlueprintSphere';
 import { AirplaneView } from '../../core/entities/Airplane/AirplaneView';
 import { AirplaneSim } from '../../core/entities/Airplane/AirplaneSim';
 import { SunLight } from '../../core/env/SunLight';
-import { ChaseCamera } from '../../core/cameras/ChaseCamera';
+
 import { useStore } from '../../store/useStore';
 import { PhysicsWorld } from '../../../engine/sim/PhysicsWorld';
 import { MenuOverlay } from '../../components/ui/MenuOverlay';
@@ -28,7 +28,12 @@ const getSpawnPoint = (index: number) => {
 // Forward declaration of the class type for use in props
 type FreeFlightModeLogicType = import('./FreeFlightMode').FreeFlightModeLogic;
 
-const FreeFlightViewport: React.FC<{ mode: FreeFlightModeLogic, player: any, cameraRef: any }> = ({ mode, player, cameraRef }) => {
+const FreeFlightViewport: React.FC<{
+    mode: FreeFlightModeLogic,
+    player: any,
+    cameraRef: any,
+    cameras?: Record<string, React.FC<any>>
+}> = ({ mode, player, cameraRef, cameras }) => {
     // We need to look up the sim for this player to attach the camera
     // Tricky: React Render vs Sim Creation sync.
     // If Sim doesn't exist yet, we can't attach camera target.
@@ -41,7 +46,11 @@ const FreeFlightViewport: React.FC<{ mode: FreeFlightModeLogic, player: any, cam
 
     if (!sim) return null; // Wait for sim
 
-    return <ChaseCamera sim={sim} cameraRef={cameraRef} />;
+    // Use Injected Camera
+    const CameraComponent = cameras ? cameras['chase'] : null;
+    if (!CameraComponent) return null; // Or fallback?
+
+    return <CameraComponent sim={sim} cameraRef={cameraRef} />;
 };
 
 const FreeFlightScene: React.FC<{ mode: FreeFlightModeLogic }> = ({ mode }) => {

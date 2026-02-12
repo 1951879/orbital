@@ -7,36 +7,45 @@ import { DeviceManager } from '../input/DeviceManager';
 import { WorldState } from '../sim/WorldState';
 import { TerrainManager } from '../sim/terrain/TerrainManager';
 import { Stars, Environment } from '@react-three/drei';
-import { SessionBridge } from '../../app/components/SessionBridge';
+
 import { SessionState } from '../session/SessionState';
 import { HTMLStencilViewportSystem } from './viewport/HTMLStencilViewportSystem.tsx';
-import { useStore } from '../../app/store/useStore';
+
 import { ViewportStencilLayout } from './viewport/ViewportStencilLayout';
 import { View } from '@react-three/drei';
 import { NetworkManager } from '../session/NetworkManager';
-import { FreeFlightModeInstance } from '../../app/modes/FreeFlight/FreeFlightMode';
 import { GameMode } from '../mode/GameMode';
-import { MainMenuModeInstance } from '../../app/modes/MainMenu/MainMenuMode';
 
-// --- MODE REGISTRY ---
-// Map Store 'mission' string to GameMode Instance
-const MODES: Record<string, GameMode> = {
-    'free': FreeFlightModeInstance,
-    'main_menu': MainMenuModeInstance
-};
+// Note: SceneRoot is now a Dumb Container. It does not import specific modes.
 
-export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
+// Define the Interface for Engine Configuration
+export interface EngineConfig {
+    isPaused: boolean;
+    mission: string;
+    localParty: any[]; // Todo: Define strict type or keep generic array
+    terrainSeed: number;
+    terrainParams: any;
+}
+
+export const SceneRoot: React.FC<{
+    modes: Record<string, GameMode>,
+    cameras: Record<string, React.FC<any>>,
+    config: EngineConfig,
+    children?: React.ReactNode
+}> = ({ modes, cameras, config, children }) => {
     const [ready, setReady] = useState(false);
     const viewRefs = React.useRef<(HTMLDivElement | null)[]>([]);
 
-    const isPaused = useStore((state) => state.isPaused);
-    const mission = useStore((state) => state.mission);
-    const localParty = useStore((state) => state.localParty);
-    const terrainSeed = useStore((state) => state.terrainSeed);
-    const terrainParams = useStore((state) => state.terrainParams);
+    // Destructure Config
+    const { isPaused, mission, localParty, terrainSeed, terrainParams } = config;
 
     // Determines Active Mode
-    const activeMode = useMemo(() => MODES[mission] || MainMenuModeInstance, [mission]);
+    // Fallback to first available mode if mission not found? Or handled by App?
+    // We assume 'main_menu' is always present or handled safely.
+    // Ensure we have a valid fallback.
+    const activeMode = useMemo(() => {
+        return modes[mission] || modes['main_menu'] || Object.values(modes)[0];
+    }, [mission, modes]);
 
     // Sync Terrain
     useEffect(() => {
@@ -53,8 +62,8 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
         const initEngine = async () => {
             // 0. Init Managers
             TerrainManager.instance.updateConfig(
-                useStore.getState().terrainSeed,
-                useStore.getState().terrainParams
+                config.terrainSeed,
+                config.terrainParams
             );
             DeviceManager.init();
             SessionState.init();
@@ -67,7 +76,7 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
             Loop.register(() => {
                 const dt = 0.016; // Fixed timestep target
                 WorldState.update(dt);
-                SessionState.update(dt);
+                // SessionState.update(dt); // Moved to Loop.ts (Kernel)
                 // MODE UPDATE
                 activeMode.update(dt);
             });
@@ -104,7 +113,6 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
                 <Stars radius={300} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
                 <Environment preset="city" />
 
-                <SessionBridge />
 
                 {/* RENDER ACTIVE MODE SCENE */}
                 <activeMode.SceneComponent />
@@ -113,13 +121,21 @@ export const SceneRoot: React.FC<{ children?: React.ReactNode }> = ({ children }
                 {isFlying && activeMode.ViewportComponent && (
                     <HTMLStencilViewportSystem viewRefs={viewRefs}>
                         {(player, cameraRef) => (
-                            <activeMode.ViewportComponent player={player} cameraRef={cameraRef} />
+                            <activeMode.ViewportComponent
+                                player={player}
+                                cameraRef={cameraRef}
+                                cameras={cameras} // Injecting Cameras Here
+                            />
                         )}
                     </HTMLStencilViewportSystem>
                 )}
 
                 {!isFlying && (
-                    <activeMode.ViewportComponent player={{ id: 0 }} cameraRef={null} />
+                    <activeMode.ViewportComponent
+                        player={{ id: 0 }}
+                        cameraRef={null}
+                        cameras={cameras} // Injecting Cameras Here
+                    />
                 )}
 
                 <View.Port />

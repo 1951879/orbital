@@ -1,19 +1,14 @@
-
 import React, { useState } from 'react';
 import { FlightTuning, Tunable } from '../../../core/tuning/FlightTuning';
 import { TuningOverlay } from './TuningOverlay';
+import { DebugConfig } from './DebugConfig';
+import { GamePanel } from './panels/GamePanel';
+import { FlightPanel } from './panels/FlightPanel';
 
 export const FlightTuningMenu: React.FC = () => {
     // We default to the "Flight" tab for now, but this structure allows more tabs later.
     const [activeTab, setActiveTab] = useState('Flight');
-    const [, setTick] = useState(0);
     const [copied, setCopied] = useState(false);
-
-    const update = (section: string, key: string, val: number) => {
-        // @ts-ignore
-        FlightTuning[section][key].value = val;
-        setTick(t => t + 1);
-    };
 
     const copyToClipboard = () => {
         // Create a simplified JSON export of JUST values? Or the whole structure?
@@ -37,6 +32,9 @@ export const FlightTuningMenu: React.FC = () => {
             setTimeout(() => setCopied(false), 2000);
         });
     };
+
+
+    if (!DebugConfig.showFlightTuning) return null;
 
     return (
         <TuningOverlay>
@@ -62,53 +60,24 @@ export const FlightTuningMenu: React.FC = () => {
                     style={{
                         flex: 1,
                         padding: '10px',
-                        background: 'transparent',
-                        color: '#444',
+                        background: activeTab === 'Game' ? '#222' : 'transparent',
+                        color: activeTab === 'Game' ? '#fff' : '#444',
                         border: 'none',
-                        cursor: 'not-allowed',
+                        cursor: 'pointer',
                         fontSize: '12px',
                         fontWeight: 'bold'
                     }}
+                    onClick={() => setActiveTab('Game')}
                 >
-                    GAME (WIP)
+                    GAME
                 </button>
             </div>
 
             {/* CONTENT */}
             <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-                {activeTab === 'Flight' && Object.entries(FlightTuning).map(([sectionKey, sectionProps]) => (
-                    <div key={sectionKey}>
-                        <div style={{
-                            fontSize: '11px',
-                            color: '#666',
-                            fontWeight: 'bold',
-                            letterSpacing: '1px',
-                            marginBottom: '10px',
-                            borderBottom: '1px solid #222',
-                            paddingBottom: '4px'
-                        }}>
-                            {sectionKey.toUpperCase()}
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {Object.entries(sectionProps).map(([propKey, propVal]) => {
-                                const p = propVal as Tunable;
-                                return (
-                                    <Slider
-                                        key={propKey}
-                                        label={propKey}
-                                        value={p.value}
-                                        min={p.min}
-                                        max={p.max}
-                                        step={p.step}
-                                        onChange={(v) => update(sectionKey, propKey, v)}
-                                    />
-                                );
-                            })}
-                        </div>
-                    </div>
-                ))}
+                {activeTab === 'Game' && <GamePanel />}
+                {activeTab === 'Flight' && <FlightPanel />}
 
             </div>
 
@@ -135,32 +104,3 @@ export const FlightTuningMenu: React.FC = () => {
         </TuningOverlay>
     );
 };
-
-const Slider: React.FC<{ label: string; value: number; min: number; max: number; step?: number; onChange: (val: number) => void }> = ({ label, value, min, max, step = 0.1, onChange }) => (
-    <div style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px', color: '#ccc' }}>
-            <span style={{ opacity: 0.8 }}>{label}</span>
-            <span style={{ color: '#60a5fa', fontFamily: 'monospace' }}>
-                {/* Formatting: Intelligent decimal places based on step size */}
-                {step < 0.01 ? value.toFixed(4) : step < 0.1 ? value.toFixed(2) : value.toFixed(1)}
-            </span>
-        </div>
-        <input
-            type="range"
-            min={min}
-            max={max}
-            step={step}
-            value={value}
-            onChange={(e) => onChange(parseFloat(e.target.value))}
-            style={{
-                width: '100%',
-                cursor: 'pointer',
-                accentColor: '#3b82f6',
-                height: '4px',
-                background: '#333',
-                borderRadius: '2px',
-                appearance: 'none' // Basic reset, deeper styling needs CSS modules usually
-            }}
-        />
-    </div>
-);

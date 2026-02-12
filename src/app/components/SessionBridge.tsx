@@ -58,13 +58,7 @@ export const SessionBridge: React.FC = () => {
 
     useEffect(() => {
         const cleanup = SessionState.onInput((pilotId, action) => {
-            if (action === 'BACK') {
-                const pilot = useStore.getState().localParty.find(p => p.id === pilotId);
-                if (pilot) {
-                    const newStatus = pilot.ui.status === 'ready' ? 'selecting' : 'ready';
-                    setPilotStatus(pilotId, newStatus);
-                }
-            } else if (action === 'PAUSE') {
+            if (action === 'PAUSE') {
                 const isPaused = useStore.getState().isPaused;
                 useStore.getState().setIsPaused(!isPaused);
             }

@@ -47,6 +47,7 @@ export type InputType =
 
 export interface PlayerInputConfig {
   type: InputType;
+  deviceId: string; // e.g. 'kb1', 'gamepad:0'
   gamepadIndex: number; // -1 if not gamepad
 }
 

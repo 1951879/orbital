@@ -25,7 +25,7 @@ The Engine knows *who* is playing and *how* they are controlling it. The App kno
 *   **Logic:**
     *   `SessionState` provides the player count.
     *   CSS determines the layout (1-4 players).
-    *   Renderer loops through players, measures DOM, sets Scissor, calls App Render.
+    *   Renderer loops through players, sets Scissor, calls `activeMode.ViewportComponent` (which renders the Injected Camera).
 **Rule:** Handles the *mechanics* of splitscreen by delegating layout to the Browser (CSS). No JS math for layout.
 
 ### Layer 3: The Session Bridge (SessionBridge)

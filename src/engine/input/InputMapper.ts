@@ -54,6 +54,11 @@ export class InputMapper {
         this.assignedDevice = id;
     }
 
+    public getActions(ctx: InputContext): ActionName[] {
+        const profile = this.contextProfiles.get(ctx);
+        return profile ? Object.keys(profile) : [];
+    }
+
     // --- QUERY API ---
 
     public getButton(action: ActionName): boolean {

@@ -3,8 +3,12 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../../store/useStore';
 import { SessionState } from '../../../engine/session/SessionState';
+import { useKeyboardJoin } from '@/src/app/modes/MainMenu/hooks/useKeyboardJoin';
 
 export const SquadronFooter: React.FC<{ launchError?: string | null }> = ({ launchError }) => {
+    // Enable Global Keyboard Join (F -> KB1, Enter -> KB2)
+    useKeyboardJoin();
+
     const localParty = useStore((state) => state.localParty);
     const setPilotStatus = useStore((state) => state.setPilotStatus);
     const maxSlots = 4;
@@ -45,8 +49,21 @@ export const SquadronFooter: React.FC<{ launchError?: string | null }> = ({ laun
     };
 
     const handleJoin = (slotIndex: number) => {
-        // Add unique keyboard player for this slot
-        SessionState.addPlayer(`keyboard_${slotIndex}`);
+        // Limit: Max 2 Local Non-Gamepad Players (P1=WASD, P2=Arrows)
+        const nonGamepadPlayers = localParty.filter(p => !p.input.type.startsWith('gamepad'));
+
+        if (nonGamepadPlayers.length >= 2) {
+            console.warn("Max 2 Local Keyboard/Touch players allowed.");
+            return;
+        }
+
+        // Determine Profile: 
+        // If no P1 (WASD) -> Assign P1
+        // If P1 exists -> Assign P2
+        const hasP1 = nonGamepadPlayers.some(p => p.input.deviceId === 'keyboard_p1');
+        const deviceId = hasP1 ? 'keyboard_p2' : 'keyboard_p1';
+
+        SessionState.addPlayer(deviceId, slotIndex);
     };
 
     return (

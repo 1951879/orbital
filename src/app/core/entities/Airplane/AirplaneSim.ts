@@ -20,7 +20,9 @@ import { FlightTuning } from '../../tuning/FlightTuning';
  * - Terrain Collision (Single & Multi-point)
  * - Visual Rotation State (for View)
  */
-export class AirplaneSim {
+import { ISimObject } from '../../../../engine/sim/ISimObject';
+
+export class AirplaneSim implements ISimObject {
     public position = new Vector3(0, 50, 0);
     public quaternion = new Quaternion();
     public currentSpeed = 0;

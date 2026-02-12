@@ -2,7 +2,12 @@ import React from 'react';
 import { useStore } from '../../../../store/useStore';
 import { PlayerSlot } from '../components/PlayerSlot';
 
+import { useKeyboardJoin } from '../../hooks/useKeyboardJoin';
+
 export const HubScreen: React.FC = () => {
+    // Enable Global Keyboard Join
+    useKeyboardJoin();
+
     const localParty = useStore(state => state.localParty);
 
     // Sort active players

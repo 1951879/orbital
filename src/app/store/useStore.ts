@@ -40,13 +40,13 @@ const DEFAULT_TERRAIN_PARAMS: TerrainParams = {
 
 
 // Initial Pilot Setup
-const createPilot = (id: number, type: InputType, gpIndex: number = -1): LocalPilot => ({
+const createPilot = (id: number, type: InputType, deviceId: string, gpIndex: number = -1): LocalPilot => ({
     id,
     sessionId: id, // Default to id
     name: id === 0 ? "Maverick" : (id === 1 ? "Goose" : (id === 2 ? "Iceman" : "Viper")),
     color: id === 0 ? "#3b82f6" : (id === 1 ? "#ef4444" : (id === 2 ? "#eab308" : "#22c55e")),
     team: (id % 2) === 0 ? 1 : 2,
-    input: { type, gamepadIndex: gpIndex },
+    input: { type, deviceId, gamepadIndex: gpIndex },
     airplane: 'interceptor',
     ui: { cursorIndex: 0, status: 'selecting', viewRotation: { x: 0, y: 0 } },
     telemetry: { altitude: 0, speed: 0, throttle: 0, pitch: 0, roll: 0 },
@@ -105,14 +105,18 @@ export const useStore = create<AppState>((set, get) => ({
         let type: InputType = 'gamepad';
         let gpIndex = -1;
 
-        if (deviceId === 'keyboard') {
-            type = 'keyboard_wasd'; // Default
+        if (deviceId === 'keyboard' || deviceId === 'keyboard_wasd') {
+            type = 'keyboard_wasd';
+        } else if (deviceId === 'keyboard_arrows') {
+            type = 'keyboard_arrows' as InputType; // Ensure InputType definition supports this?
         } else if (deviceId.startsWith('gamepad:')) {
             type = 'gamepad';
             gpIndex = parseInt(deviceId.split(':')[1]);
+        } else if (deviceId === 'kb1' || deviceId === 'kb2') {
+            type = 'keyboard_wasd'; // or generic keyboard type
         }
 
-        const newPilot = createPilot(sessionId, type, gpIndex);
+        const newPilot = createPilot(sessionId, type, deviceId, gpIndex);
         newPilot.sessionId = sessionId; // Ensure explicit set
 
         // Determine Game Mode

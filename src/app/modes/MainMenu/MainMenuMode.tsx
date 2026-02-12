@@ -2,7 +2,7 @@ import React from 'react';
 import { GameMode } from '../../../engine/mode/GameMode';
 import { MainMenuContainer } from './ui/MainMenuContainer';
 import { SessionState } from '../../../engine/session/SessionState';
-import { MAIN_MENU_PROFILE } from './MainMenuInput';
+import { MAIN_MENU_GAMEPAD, MAIN_MENU_KB1, MAIN_MENU_KB2 } from './input/MainMenuInput';
 import { useStore } from '../../store/useStore';
 
 // --- REACT COMPONENTS ---
@@ -34,9 +34,21 @@ export class MainMenuModeLogic implements GameMode {
         // Reset Mission state if returning from game
         useStore.getState().setMission('main_menu');
 
-        // Register Input Profile
-        SessionState.registerDefaultProfile('gamepad', 'MENU', MAIN_MENU_PROFILE);
-        SessionState.registerDefaultProfile('keyboard', 'MENU', MAIN_MENU_PROFILE);
+        // Register Input Profiles
+        // NOTE: SessionState uses startsWith() for matching deviceId to profile key.
+        // So 'keyboard_wasd' will match 'keyboard_wasd:MENU'
+        // And 'gamepad:0' will match 'gamepad:MENU'
+
+        SessionState.registerDefaultProfile('gamepad', 'MENU', MAIN_MENU_GAMEPAD);
+
+        // Keyboard Profiles (KB1 = WASD, KB2 = PL;')
+        SessionState.registerDefaultProfile('kb1', 'MENU', MAIN_MENU_KB1);
+        SessionState.registerDefaultProfile('kb2', 'MENU', MAIN_MENU_KB2);
+
+        // Fallback for generic 'keyboard'
+
+
+
 
         // Force Context to MENU
         SessionState.setContextForAll('MENU');

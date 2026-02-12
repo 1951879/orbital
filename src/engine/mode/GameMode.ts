@@ -6,7 +6,11 @@ export interface GameMode {
     // Components to Render
     SceneComponent: React.FC;
     UIComponent: React.FC;
-    ViewportComponent?: React.FC<{ player: any, cameraRef: any }>; // Generic for now, ideally LocalPilot
+    ViewportComponent?: React.FC<{
+        player: any,
+        cameraRef: any,
+        cameras?: Record<string, React.FC<any>> // Injected Cameras
+    }>;
 
     // Logic Loop
     update: (dt: number) => void;
