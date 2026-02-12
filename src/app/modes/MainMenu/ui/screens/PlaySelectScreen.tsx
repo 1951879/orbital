@@ -1,90 +1,174 @@
-import React from 'react';
-import { Button } from '../kit/Button';
-import { useMainMenuStore } from '../../MainMenuStore';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useMainMenuStore, GameModeId } from '../../MainMenuStore';
+import { SessionState } from '../../../../../engine/session/SessionState';
 
-const GAME_MODES = [
-    { id: 'free_flight', name: 'Free Flight', desc: 'No rules. Just fly.', icon: '✈️' },
-    { id: 'team_deathmatch', name: 'Team Deathmatch', desc: 'Red vs Blue. 4v4.', icon: '⚔️' },
-    { id: 'racing', name: 'Canyon Run', desc: 'High speed checkpoint race.', icon: '🏁' },
+// --- Mode Registry ---
+// Each entry describes a gameplay mode available for lobby creation/filtering.
+// `missionKey` maps to MODES keys in App.tsx for launching.
+const AVAILABLE_MODES: { id: GameModeId; name: string; icon: string; missionKey: string }[] = [
+    { id: 'free_flight', name: 'Free Flight', icon: '✈️', missionKey: 'free' },
+    // Future modes go here:
+    // { id: 'tdm', name: 'Team Deathmatch', icon: '⚔️', missionKey: 'tdm' },
+    // { id: 'racing', name: 'Canyon Run', icon: '🏁', missionKey: 'racing' },
 ];
 
-const MOCK_LOBBIES = [
-    { id: '1', name: "Maverick's Room", mode: 'Team Deathmatch', map: 'Archipelago', players: 3, max: 8, ping: 45 },
-    { id: '2', name: "Training Day", mode: 'Free Flight', map: 'Ocean', players: 1, max: 4, ping: 12 },
-    { id: '3', name: "Dogfight 24/7", mode: 'Team Deathmatch', map: 'Desert', players: 7, max: 8, ping: 88 },
-];
+// Full tab list: 'all' + each mode
+const MODE_TABS: GameModeId[] = ['all', ...AVAILABLE_MODES.map(m => m.id)];
 
 export const PlaySelectScreen: React.FC = () => {
+    const currentScreen = useMainMenuStore(state => state.currentScreen);
     const setScreen = useMainMenuStore(state => state.setScreen);
+    const selectedMode = useMainMenuStore(state => state.selectedModeFilter);
+    const setSelectedMode = useMainMenuStore(state => state.setSelectedModeFilter);
 
-    const handleCreateLobby = (modeId: string) => {
-        console.log("Creating Lobby for", modeId);
-        setScreen('briefing'); // Go to Briefing (Lobby)
-    };
+    // Vertical cursor for the lobby list (0 = Create button, 1+ = lobbies)
+    const [listIndex, setListIndex] = useState(0);
 
-    const handleJoinLobby = (lobbyId: string) => {
-        console.log("Joining Lobby", lobbyId);
-        setScreen('briefing'); // Go to Briefing (Lobby)
-    };
+    const selectedModeData = AVAILABLE_MODES.find(m => m.id === selectedMode);
+
+    // Lobby items: Create button is always first, future lobbies follow
+    // For now, only the Create button exists
+    const lobbyItems = [{ type: 'create' as const }];
+    // Future: append actual lobbies here
+    // e.g. ...filteredLobbies.map(l => ({ type: 'lobby', data: l }))
+
+    const handleCreate = useCallback(() => {
+        console.log('[PlaySelect] Creating operation:', selectedMode);
+        setScreen('briefing');
+    }, [selectedMode, setScreen]);
+
+    // --- Input Handling ---
+    useEffect(() => {
+        // Only handle input when this screen is active
+        if (currentScreen !== 'operations') return;
+
+        const handleInput = (playerId: number, action: string) => {
+            // Only host (P0) navigates
+            if (playerId !== 0) return;
+
+            switch (action) {
+                case 'NAV_LEFT': {
+                    const currentIdx = MODE_TABS.indexOf(selectedMode);
+                    const prevIdx = (currentIdx - 1 + MODE_TABS.length) % MODE_TABS.length;
+                    setSelectedMode(MODE_TABS[prevIdx]);
+                    break;
+                }
+                case 'NAV_RIGHT': {
+                    const currentIdx = MODE_TABS.indexOf(selectedMode);
+                    const nextIdx = (currentIdx + 1) % MODE_TABS.length;
+                    setSelectedMode(MODE_TABS[nextIdx]);
+                    break;
+                }
+                case 'NAV_UP': {
+                    setListIndex(prev => (prev - 1 + lobbyItems.length) % lobbyItems.length);
+                    break;
+                }
+                case 'NAV_DOWN': {
+                    setListIndex(prev => (prev + 1) % lobbyItems.length);
+                    break;
+                }
+                case 'SELECT': {
+                    // Activate the focused list item
+                    const item = lobbyItems[listIndex];
+                    if (item?.type === 'create') {
+                        handleCreate();
+                    }
+                    // Future: if item.type === 'lobby', join that lobby
+                    break;
+                }
+            }
+        };
+
+        const cleanup = SessionState.onInput(handleInput);
+        return () => { cleanup(); };
+    }, [currentScreen, selectedMode, setSelectedMode, listIndex, lobbyItems.length, handleCreate]);
 
     return (
-        <div className="w-full h-full flex flex-col gap-8 p-4 max-w-6xl mx-auto">
-            {/* TOP: CREATE MATCH (Game Modes) */}
-            <div className="flex flex-col gap-4">
-                <h3 className="text-white font-bold uppercase tracking-wider text-sm border-b border-white/10 pb-2">Create Custom Operation</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {GAME_MODES.map(mode => (
-                        <button
-                            key={mode.id}
-                            onClick={() => handleCreateLobby(mode.id)}
-                            className="group relative bg-white/5 border border-white/10 hover:bg-white/10 hover:border-blue-500/50 rounded-xl p-6 text-left transition-all duration-300 hover:scale-[1.02]"
-                        >
-                            <div className="text-4xl mb-4 grayscale group-hover:grayscale-0 transition-all">{mode.icon}</div>
-                            <div className="text-lg font-black text-white uppercase italic">{mode.name}</div>
-                            <div className="text-xs text-slate-400 mt-1 font-mono">{mode.desc}</div>
+        <div className="w-full h-full flex flex-col gap-6 p-4 max-w-5xl mx-auto">
 
-                            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-[10px] bg-blue-600 text-white px-2 py-1 rounded font-bold uppercase">Create</span>
-                            </div>
-                        </button>
-                    ))}
-                </div>
+            {/* MODE TAB BAR */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                {/* "ALL" tab */}
+                <button
+                    onClick={() => setSelectedMode('all')}
+                    className={`shrink-0 flex items-center px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 border leading-[1.5rem] ${selectedMode === 'all'
+                        ? 'bg-white/10 text-white border-white/20 shadow-[0_0_10px_rgba(255,255,255,0.1)]'
+                        : 'bg-transparent text-slate-500 border-transparent hover:text-slate-300 hover:bg-white/5'
+                        }`}
+                >
+                    ALL
+                </button>
+
+                {/* Separator */}
+                <div className="w-px h-6 bg-white/10 shrink-0" />
+
+                {/* Mode tabs */}
+                {AVAILABLE_MODES.map(mode => (
+                    <button
+                        key={mode.id}
+                        onClick={() => setSelectedMode(mode.id)}
+                        className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 border ${selectedMode === mode.id
+                            ? 'bg-blue-600/20 text-blue-300 border-blue-500/40 shadow-[0_0_12px_rgba(59,130,246,0.2)]'
+                            : 'bg-white/5 text-slate-400 border-white/5 hover:bg-white/10 hover:text-white hover:border-white/10'
+                            }`}
+                    >
+                        <span className={`text-base ${selectedMode === mode.id ? '' : 'grayscale opacity-60'} transition-all`}>
+                            {mode.icon}
+                        </span>
+                        {mode.name}
+                    </button>
+                ))}
             </div>
 
-            {/* BOTTOM: SERVER BROWSER */}
-            <div className="flex-1 min-h-0 flex flex-col gap-4">
+            {/* CREATE OPERATION BUTTON */}
+            <button
+                onClick={handleCreate}
+                className={`group w-full flex items-center gap-3 px-5 py-4 rounded-xl border transition-all duration-300 ${listIndex === 0
+                        ? 'border-blue-500/50 bg-blue-600/10 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
+                        : 'border-dashed border-white/10 bg-white/[0.02] hover:border-blue-500/50 hover:bg-blue-600/10'
+                    }`}
+            >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg transition-all ${listIndex === 0
+                        ? 'bg-blue-600/40 text-blue-300'
+                        : 'bg-blue-600/20 text-blue-400 group-hover:bg-blue-600/40'
+                    }`}>
+                    +
+                </div>
+                <div className="flex flex-col text-left">
+                    <span className="text-sm font-black text-white uppercase tracking-wide">
+                        {selectedModeData
+                            ? `Create ${selectedModeData.name} Operation`
+                            : 'Create Operation'
+                        }
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                        {selectedModeData
+                            ? selectedModeData.icon + ' Local Game'
+                            : 'Choose a mode and start playing'
+                        }
+                    </span>
+                </div>
+            </button>
+
+            {/* LOBBY LIST (empty for now) */}
+            <div className="flex-1 min-h-0 flex flex-col gap-3">
                 <div className="flex justify-between items-end border-b border-white/10 pb-2">
-                    <h3 className="text-white font-bold uppercase tracking-wider text-sm">Live Uplinks</h3>
-                    <div className="text-[10px] text-slate-500 font-mono">REFRESHING...</div>
+                    <h3 className="text-white font-bold uppercase tracking-wider text-xs">
+                        {selectedModeData ? `${selectedModeData.name} Lobbies` : 'All Lobbies'}
+                    </h3>
+                    <span className="text-[10px] text-slate-600 font-mono uppercase">Local Only</span>
                 </div>
 
-                <div className="flex-1 overflow-y-auto pr-2 space-y-2">
-                    {MOCK_LOBBIES.map(lobby => (
-                        <div
-                            key={lobby.id}
-                            className="bg-slate-900/40 border border-white/5 p-3 rounded flex items-center justify-between hover:bg-slate-800 transition-colors cursor-pointer group"
-                            onClick={() => handleJoinLobby(lobby.id)}
-                        >
-                            <div className="flex flex-col gap-0.5">
-                                <div className="text-sm font-bold text-white group-hover:text-blue-300">{lobby.name}</div>
-                                <div className="text-[10px] text-slate-400 font-mono uppercase">
-                                    {lobby.mode} • <span className="text-slate-500">{lobby.map}</span>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-6">
-                                <div className="text-[10px] font-mono text-slate-400">
-                                    {lobby.players}/{lobby.max} <span className="text-slate-600">PILOTS</span>
-                                </div>
-                                <div className={`text-[10px] font-mono ${lobby.ping < 50 ? 'text-green-500' : 'text-yellow-500'}`}>
-                                    {lobby.ping}ms
-                                </div>
-                                <Button size="sm" variant="secondary" className="opacity-0 group-hover:opacity-100 transition-opacity">JOIN</Button>
-                            </div>
-                        </div>
-                    ))}
+                {/* Empty State */}
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="text-2xl mb-3 opacity-20">📡</div>
+                        <div className="text-sm text-slate-500 font-medium">No lobbies found</div>
+                        <div className="text-[10px] text-slate-600 mt-1 font-mono">Create an operation above to get started</div>
+                    </div>
                 </div>
             </div>
+
         </div>
     );
 };

@@ -1,4 +1,4 @@
-import { InputProfile } from '../../../engine/input/InputMapper';
+import { InputProfile } from '../../../../engine/input/InputMapper';
 
 export const MAIN_MENU_GAMEPAD: InputProfile = {
     "NAV_UP": [{ deviceType: 'gamepad', button: 12 }],

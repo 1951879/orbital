@@ -1,117 +1,216 @@
-import React, { useState } from 'react';
-import { Button } from '../kit/Button';
-import { Card } from '../kit/Card';
-import { useMainMenuStore } from '../../MainMenuStore';
+import React from 'react';
+import { View, PerspectiveCamera, OrbitControls } from '@react-three/drei';
 import { useStore } from '../../../../store/useStore';
+import { useMainMenuStore } from '../../MainMenuStore';
+import { BlueprintSphere } from '../../../../core/env/BlueprintSphere';
+import { SunLight } from '../../../../core/env/SunLight';
+import { Card } from '../kit/Card';
+import { TerrainParams } from '../../../../../types';
 
-const MAPS = [
-    { id: 'ocean_archipelago', name: 'Archipelago', desc: 'Islands and open water.' },
-    { id: 'canyon_run', name: 'Red Canyon', desc: 'Tight turns and tunnels.' },
-    { id: 'arctic_tundra', name: 'Frozen Tundra', desc: 'Low visibility snow storms.' },
-];
+// --- PLANET PREVIEW (R3F View) ---
+const PlanetPreview: React.FC = () => {
+    const planetRadius = useStore(state => state.terrainParams.planetRadius);
+    const camDist = planetRadius * 3;
 
+    return (
+        <View className="absolute inset-0">
+            <PerspectiveCamera makeDefault position={[0, camDist * 0.3, camDist]} fov={45} />
+            <OrbitControls
+                enablePan={false}
+                enableZoom={true}
+                minDistance={planetRadius * 1.5}
+                maxDistance={planetRadius * 6}
+                autoRotate
+                autoRotateSpeed={0.5}
+            />
+            <BlueprintSphere />
+            <SunLight />
+        </View>
+    );
+};
+
+// --- TERRAIN SLIDER ---
+const TerrainSlider: React.FC<{
+    label: string;
+    paramKey: keyof TerrainParams;
+    min: number;
+    max: number;
+    step: number;
+}> = ({ label, paramKey, min, max, step }) => {
+    const value = useStore(state => state.terrainParams[paramKey]);
+    const setParam = useStore(state => state.setTerrainParam);
+
+    return (
+        <div className="flex items-center gap-3">
+            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider w-28 shrink-0">
+                {label}
+            </span>
+            <input
+                type="range"
+                min={min}
+                max={max}
+                step={step}
+                value={value}
+                onChange={e => setParam(paramKey, parseFloat(e.target.value))}
+                className="flex-1 h-1 accent-blue-500 bg-white/10 rounded-full appearance-none cursor-pointer
+                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-400
+                    [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(59,130,246,0.4)]"
+            />
+            <span className="text-[10px] font-mono text-slate-500 w-10 text-right">
+                {typeof value === 'number' ? value.toFixed(value >= 10 ? 0 : 1) : value}
+            </span>
+        </div>
+    );
+};
+
+// --- MAIN COMPONENT ---
 export const LobbyScreen: React.FC = () => {
-    const setScreen = useMainMenuStore(state => state.setScreen);
     const localParty = useStore(state => state.localParty);
-    const [selectedMap, setSelectedMap] = useState(MAPS[0]);
-    const [selectedMode, setSelectedMode] = useState('Team Deathmatch'); // Start with a default
+    const setMission = useStore(state => state.setMission);
+    const setIsPaused = useStore(state => state.setIsPaused);
+    const generateNewTerrain = useStore(state => state.generateNewTerrain);
+    const terrainSeed = useStore(state => state.terrainSeed);
+    const selectedMode = useMainMenuStore(state => state.selectedModeFilter);
+
+    const modeName = selectedMode === 'free_flight' ? 'Free Flight' : 'Free Flight'; // Only mode for now
 
     const handleLaunch = () => {
-        console.log("LAUNCHING GAME", { map: selectedMap, mode: selectedMode });
-        // Trigger Launch Logic
+        console.log('[LobbyScreen] Launching sortie:', selectedMode);
+        setMission('free');
+        setIsPaused(false);
     };
 
     return (
-        <div className="w-full h-full flex flex-col md:flex-row gap-8 p-4 max-w-7xl mx-auto">
+        <div className="w-full h-full flex gap-4 p-4 max-w-7xl mx-auto">
 
-            {/* LEFT: SETTINGS (Host Only) */}
-            <div className="w-full md:w-1/3 flex flex-col gap-6">
-                {/* Game Mode Selector */}
-                <Card title="Mission Type">
-                    <select
-                        className="w-full bg-black/50 border border-white/10 text-white rounded p-2 focus:border-blue-500 outline-none uppercase font-bold"
-                        value={selectedMode}
-                        onChange={(e) => setSelectedMode(e.target.value)}
-                    >
-                        <option>Team Deathmatch</option>
-                        <option>Free Flight</option>
-                        <option>Canyon Run</option>
-                        <option>Capture The Flag</option>
-                    </select>
-                    <div className="mt-2 text-xs text-slate-400">
-                        Host can change this at any time.
+            {/* LEFT COLUMN: Flight Manifest + Mission Brief */}
+            <div className="w-2/5 max-w-[320px] flex flex-col gap-4 shrink-0">
+
+                {/* FLIGHT MANIFEST */}
+                <Card title="✈ FLIGHT MANIFEST" variant="dark" className="flex-1" noPadding>
+                    <div className="flex flex-col gap-1 p-3">
+                        {[0, 1, 2, 3].map(slotIdx => {
+                            const pilot = localParty.find(p => p.id === slotIdx);
+                            if (pilot) {
+                                const isReady = pilot.ui.status === 'ready';
+                                return (
+                                    <div
+                                        key={slotIdx}
+                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all ${isReady
+                                            ? 'bg-green-900/20 border-green-500/30'
+                                            : 'bg-white/5 border-white/5'
+                                            }`}
+                                    >
+                                        {/* Color dot */}
+                                        <div
+                                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-lg"
+                                            style={{ backgroundColor: pilot.color, boxShadow: `0 0 8px ${pilot.color}40` }}
+                                        />
+                                        {/* Name + plane */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-xs font-bold text-white uppercase tracking-wider truncate">
+                                                {pilot.name}
+                                            </div>
+                                            <div className="text-[9px] font-mono text-slate-500 uppercase">
+                                                {pilot.airplane}
+                                            </div>
+                                        </div>
+                                        {/* Ready indicator */}
+                                        <div className={`text-[8px] font-bold uppercase tracking-widest ${isReady ? 'text-green-400' : 'text-slate-600'
+                                            }`}>
+                                            {isReady ? 'RDY' : 'STBY'}
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            // Empty slot
+                            return (
+                                <div
+                                    key={slotIdx}
+                                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-dashed border-white/5 bg-transparent"
+                                >
+                                    <div className="w-2.5 h-2.5 rounded-full bg-white/10 shrink-0" />
+                                    <span className="text-[10px] font-mono text-slate-700 uppercase">
+                                        Empty Slot
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </Card>
 
-                {/* Map Selector */}
-                <Card title="Theatre of Operation">
-                    <div className="flex flex-col gap-2">
-                        {MAPS.map(map => (
-                            <button
-                                key={map.id}
-                                onClick={() => setSelectedMap(map)}
-                                className={`text-left p-3 rounded border transition-all ${selectedMap.id === map.id ? 'bg-blue-600 border-blue-400 text-white' : 'bg-white/5 border-transparent text-slate-400 hover:bg-white/10'}`}
-                            >
-                                <div className="font-bold uppercase text-xs">{map.name}</div>
-                                <div className="text-[10px] opacity-70">{map.desc}</div>
-                            </button>
-                        ))}
-                    </div>
-                </Card>
-
-                <Card title="Rules of Engagement">
-                    <div className="flex flex-col gap-2 text-xs uppercase text-slate-400">
-                        <div className="flex justify-between">
-                            <span>Time Limit</span>
-                            <span className="text-white">10:00</span>
+                {/* MISSION BRIEF */}
+                <Card title="📋 MISSION BRIEF" variant="dark" noPadding>
+                    <div className="p-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-mono text-slate-500 uppercase">Sortie Type</span>
+                            <span className="text-xs font-bold text-white uppercase tracking-wider">{modeName}</span>
                         </div>
-                        <div className="flex justify-between">
-                            <span>Score Limit</span>
-                            <span className="text-white">30 Kills</span>
+                        <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-mono text-slate-500 uppercase">Objectives</span>
+                            <span className="text-[10px] font-mono text-slate-400">None — Free Ops</span>
                         </div>
-                        <div className="flex justify-between">
-                            <span>Respawn Delay</span>
-                            <span className="text-white">5s</span>
+                        <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-mono text-slate-500 uppercase">Rules of Engagement</span>
+                            <span className="text-[10px] font-mono text-slate-400">Unrestricted</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-mono text-slate-500 uppercase">Time Limit</span>
+                            <span className="text-[10px] font-mono text-slate-400">Unlimited</span>
                         </div>
                     </div>
                 </Card>
             </div>
 
-            {/* RIGHT: ROSTER / CHAT */}
-            <div className="flex-1 flex flex-col gap-4">
-                <Card title="Squad Roster" className="flex-1" noPadding>
-                    <div className="p-4 grid grid-cols-1 gap-2">
-                        {localParty.map((p, i) => (
-                            <div key={i} className="flex items-center gap-4 bg-white/5 p-2 rounded">
-                                <div className="w-8 h-8 rounded bg-slate-700 flex items-center justify-center font-bold text-xs">
-                                    P{p.id + 1}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="text-xs font-bold text-white uppercase" style={{ color: p.color }}>{p.name}</div>
-                                    <div className="text-[9px] text-slate-400 uppercase">{p.airplane}</div>
-                                </div>
-                                <div className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded uppercase font-bold">
-                                    READY
-                                </div>
+            {/* RIGHT COLUMN: AO + Controls + Launch */}
+            <div className="flex-1 flex flex-col gap-4 min-w-0">
+
+                {/* AREA OF OPERATIONS — 3D Planet Preview */}
+                <div className="flex-1 rounded-xl border border-white/10 relative overflow-hidden min-h-[300px]">
+                    {/* Section label */}
+                    <div className="absolute top-0 left-0 right-0 z-10 px-4 py-2 bg-gradient-to-b from-black/60 to-transparent">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            🌍 Area of Operations
+                        </span>
+                    </div>
+                    <PlanetPreview />
+                </div>
+
+                {/* TERRAIN CONFIG */}
+                <Card variant="glass" noPadding>
+                    <div className="px-4 py-3 space-y-2.5">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Terrain Parameters</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-mono text-slate-600">SEED: {terrainSeed}</span>
+                                <button
+                                    onClick={generateNewTerrain}
+                                    className="text-[10px] px-2 py-0.5 rounded border border-white/10 text-slate-400
+                                        hover:text-white hover:border-blue-500/50 hover:bg-blue-600/10 transition-all"
+                                    title="Randomize Terrain"
+                                >
+                                    🔄
+                                </button>
                             </div>
-                        ))}
-                        {/* Empty Slots */}
-                        {[...Array(Math.max(0, 8 - localParty.length))].map((_, i) => (
-                            <div key={`empty-${i}`} className="flex items-center gap-4 border border-dashed border-white/5 p-2 rounded opacity-50">
-                                <div className="w-8 h-8 rounded bg-transparent border border-white/10" />
-                                <div className="text-xs text-slate-600 uppercase italic">Waiting for connection...</div>
-                            </div>
-                        ))}
+                        </div>
+                        <TerrainSlider label="Planet Size" paramKey="planetRadius" min={5} max={100} step={1} />
+                        <TerrainSlider label="Mountains" paramKey="mountainScale" min={0} max={2} step={0.1} />
+                        <TerrainSlider label="Water Level" paramKey="waterLevel" min={0} max={1} step={0.05} />
+                        <TerrainSlider label="Mtn Frequency" paramKey="mountainFrequency" min={0.1} max={5} step={0.1} />
                     </div>
                 </Card>
 
-                <Button
-                    size="lg"
+                {/* LAUNCH BUTTON */}
+                <button
                     onClick={handleLaunch}
-                    className="bg-orange-600 border-orange-400 hover:bg-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.4)]"
+                    className="w-full py-4 rounded-xl font-black text-lg uppercase tracking-[0.2em] transition-all duration-300
+                        bg-gradient-to-r from-blue-600 to-blue-500 text-white
+                        hover:from-blue-500 hover:to-blue-400 hover:shadow-[0_0_30px_rgba(59,130,246,0.3)]
+                        active:scale-[0.98]"
                 >
-                    LAUNCH MISSION
-                </Button>
+                    Launch
+                </button>
             </div>
 
         </div>
