@@ -1,218 +1,281 @@
-import React from 'react';
+import React, { useMemo, useCallback, useRef } from 'react';
 import { View, PerspectiveCamera, OrbitControls } from '@react-three/drei';
+import { useThree, useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
 import { useStore } from '../../../../store/useStore';
-import { useMainMenuStore } from '../../MainMenuStore';
+import { useMainMenuStore, LOBBY_PANELS } from '../../MainMenuStore';
 import { BlueprintSphere } from '../../../../core/env/BlueprintSphere';
 import { SunLight } from '../../../../core/env/SunLight';
+import { useLayoutMode } from '../../hooks/useLayoutMode';
+import { useLobbyInput, LobbyPanelDescriptor } from '../../hooks/useLobbyInput';
 import { Card } from '../kit/Card';
+import { CarouselIndicator } from '../kit/CarouselIndicator';
+import { RosterPanel } from '../panels/RosterPanel';
+import { MissionPanel } from '../panels/MissionPanel';
+import { TerrainPanel } from '../panels/TerrainPanel';
+import { SessionState } from '../../../../../engine/session/SessionState';
+import { PRESETS } from '../../../../components/ui/tabs/data';
 import { TerrainParams } from '../../../../../types';
 
-// --- PLANET PREVIEW (R3F View) ---
+// ─── PANEL LABEL REGISTRY ────────────────────────────────────────────────────
+
+const PANEL_LABELS = [
+    { id: 'roster', label: 'ROSTER' },
+    { id: 'mission', label: 'MISSION' },
+    { id: 'terrain', label: 'AO PRESETS' },
+] as const;
+
+const PANEL_TITLES: Record<string, string> = {
+    roster: '✈ ROSTER',
+    mission: '📋 MISSION',
+    terrain: '🌍 AO PRESETS',
+};
+
+// ─── PLANET PREVIEW ──────────────────────────────────────────────────────────
+
+const PREVIEW_FOV = 45;
+// Tight fit — atmosphere/mountains should just kiss the narrower edges
+const PREVIEW_PADDING = 1.05;
+
+/**
+ * Sets the camera to an ideal distance on mount and whenever the
+ * planet radius changes. Does NOT continuously override — manual
+ * zoom via OrbitControls still works after the initial fit.
+ */
+const CameraFitter: React.FC<{ radius: number }> = ({ radius }) => {
+    const { camera, size } = useThree();
+    const lastRadius = useRef(0);
+
+    useFrame(() => {
+        if (!(camera instanceof THREE.PerspectiveCamera)) return;
+        // Only snap when the radius actually changes (preset switch or first frame)
+        if (radius === lastRadius.current) return;
+        lastRadius.current = radius;
+
+        // Account for mountains poking above the base sphere
+        const mountainScale = useStore.getState().terrainParams.mountainScale;
+        const visualRadius = radius * (1 + mountainScale * 0.08);
+
+        const aspect = size.width / size.height;
+        const halfFov = (camera.fov / 2) * (Math.PI / 180);
+
+        // Fit to whichever dimension is narrower
+        const distV = visualRadius / Math.sin(halfFov);
+        const halfFovH = Math.atan(Math.tan(halfFov) * aspect);
+        const distH = visualRadius / Math.sin(halfFovH);
+        const idealDist = Math.max(distV, distH) * PREVIEW_PADDING;
+
+        const dir = camera.position.clone().normalize();
+        if (dir.lengthSq() === 0) dir.set(0, 0.3, 1).normalize();
+        camera.position.copy(dir.multiplyScalar(idealDist));
+    });
+
+    return null;
+};
+
 const PlanetPreview: React.FC = () => {
     const planetRadius = useStore(state => state.terrainParams.planetRadius);
-    const camDist = planetRadius * 3;
+    const initDist = planetRadius * 6;
 
     return (
         <View className="absolute inset-0">
-            <PerspectiveCamera makeDefault position={[0, camDist * 0.3, camDist]} fov={45} />
+            <PerspectiveCamera makeDefault position={[0, initDist * 0.3, initDist]} fov={PREVIEW_FOV} />
             <OrbitControls
                 enablePan={false}
                 enableZoom={true}
-                minDistance={planetRadius * 1.5}
-                maxDistance={planetRadius * 6}
+                minDistance={planetRadius * 1.7}
+                maxDistance={planetRadius * 8}
                 autoRotate
-                autoRotateSpeed={0.5}
+                autoRotateSpeed={0.05}
             />
+            <CameraFitter radius={planetRadius} />
             <BlueprintSphere />
             <SunLight />
         </View>
     );
 };
 
-// --- TERRAIN SLIDER ---
-const TerrainSlider: React.FC<{
-    label: string;
-    paramKey: keyof TerrainParams;
-    min: number;
-    max: number;
-    step: number;
-}> = ({ label, paramKey, min, max, step }) => {
-    const value = useStore(state => state.terrainParams[paramKey]);
-    const setParam = useStore(state => state.setTerrainParam);
+// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 
-    return (
-        <div className="flex items-center gap-3">
-            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider w-28 shrink-0">
-                {label}
-            </span>
-            <input
-                type="range"
-                min={min}
-                max={max}
-                step={step}
-                value={value}
-                onChange={e => setParam(paramKey, parseFloat(e.target.value))}
-                className="flex-1 h-1 accent-blue-500 bg-white/10 rounded-full appearance-none cursor-pointer
-                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-400
-                    [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(59,130,246,0.4)]"
-            />
-            <span className="text-[10px] font-mono text-slate-500 w-10 text-right">
-                {typeof value === 'number' ? value.toFixed(value >= 10 ? 0 : 1) : value}
-            </span>
-        </div>
-    );
-};
-
-// --- MAIN COMPONENT ---
 export const LobbyScreen: React.FC = () => {
+    const { mode: layoutMode, orientation } = useLayoutMode();
     const localParty = useStore(state => state.localParty);
-    const setMission = useStore(state => state.setMission);
-    const setIsPaused = useStore(state => state.setIsPaused);
+    const setTerrainParam = useStore(state => state.setTerrainParam);
     const generateNewTerrain = useStore(state => state.generateNewTerrain);
-    const terrainSeed = useStore(state => state.terrainSeed);
-    const selectedMode = useMainMenuStore(state => state.selectedModeFilter);
 
-    const modeName = selectedMode === 'free_flight' ? 'Free Flight' : 'Free Flight'; // Only mode for now
+    const isHost = localParty.some(p => p.id === 0);
 
-    const handleLaunch = () => {
-        console.log('[LobbyScreen] Launching sortie:', selectedMode);
-        setMission('free');
-        setIsPaused(false);
+    // ─── Panel descriptors (O/C: each panel declares its own behavior) ──
+    const panelDescriptors: LobbyPanelDescriptor[] = useMemo(() => [
+        {
+            id: 'roster',
+            maxItems: localParty.length || 1,
+            onActivate: (itemIndex: number) => {
+                // Do nothing. Roster actions are handled by the card's internal tray.
+            },
+            onContext: (itemIndex: number) => {
+                const slotId = localParty[itemIndex]?.id;
+                if (slotId !== undefined) {
+                    useMainMenuStore.getState().setOpenRosterMenu(slotId);
+                }
+            },
+            onTrayAction: (itemIndex: number, actionIndex: number) => {
+                const slotId = localParty[itemIndex]?.id;
+                if (slotId === undefined) return;
+
+                const isHostSlot = slotId === 0;
+
+                if (isHostSlot) {
+                    // Resign
+                    console.log(`[Roster] Resign Host`);
+                    // TODO: Implement Resign
+                    useMainMenuStore.getState().setOpenRosterMenu(null);
+                } else {
+                    if (actionIndex === 0) {
+                        // Ring
+                        console.log(`[Roster] Ring player ${slotId}`);
+                        useMainMenuStore.getState().setOpenRosterMenu(null);
+                    } else if (actionIndex === 1) {
+                        // Make Host
+                        console.log(`[Roster] Transfer host to player ${slotId}`);
+                        useMainMenuStore.getState().setOpenRosterMenu(null);
+                    } else if (actionIndex === 2) {
+                        // Kick (Only valid if host)
+                        if (isHost) {
+                            SessionState.removePlayer(slotId);
+                            useMainMenuStore.getState().setOpenRosterMenu(null);
+                        }
+                    }
+                }
+            }
+        },
+
+        {
+            id: 'mission',
+            maxItems: 0,
+            onActivate: () => { },
+        },
+        {
+            id: 'terrain',
+            maxItems: PRESETS.length + 1,
+            onActivate: (itemIndex: number) => {
+                if (itemIndex < PRESETS.length) {
+                    const preset = PRESETS[itemIndex];
+                    Object.entries(preset.params).forEach(([k, v]) => {
+                        setTerrainParam(k as keyof TerrainParams, v as number);
+                    });
+                    generateNewTerrain();
+                } else {
+                    generateNewTerrain();
+                }
+            },
+        },
+    ], [isHost, localParty, setTerrainParam, generateNewTerrain]);
+
+    // ─── Hook: navigation, focus, carousel ──────────────────────
+    const {
+        focusedZone, focusedItem, carouselIndex, showFocus,
+        onTouchStart, onTouchEnd,
+    } = useLobbyInput(panelDescriptors);
+
+    // ─── Render panel by ID ─────────────────────────────────────
+    const renderPanel = (panelId: string) => {
+        const isFocused = focusedZone === panelId;
+        switch (panelId) {
+            case 'roster':
+                return (
+                    <RosterPanel
+                        focusedItem={isFocused ? focusedItem : -1}
+                        showFocus={showFocus && isFocused}
+                        isHost={isHost}
+                    />
+                );
+            case 'mission':
+                return (
+                    <MissionPanel
+                        focusedItem={isFocused ? focusedItem : -1}
+                        showFocus={showFocus && isFocused}
+                    />
+                );
+            case 'terrain':
+                return (
+                    <TerrainPanel
+                        focusedItem={isFocused ? focusedItem : -1}
+                        showFocus={showFocus && isFocused}
+                    />
+                );
+            default:
+                return null;
+        }
     };
 
-    return (
-        <div className="w-full h-full flex gap-4 p-4 max-w-7xl mx-auto">
+    // ─── CAROUSEL LAYOUT (phone) ────────────────────────────────
+    if (layoutMode === 'carousel') {
+        const isPortrait = orientation === 'portrait';
+        const activePanel = LOBBY_PANELS[carouselIndex];
 
-            {/* LEFT COLUMN: Flight Manifest + Mission Brief */}
-            <div className="w-2/5 max-w-[320px] flex flex-col gap-4 shrink-0">
-
-                {/* FLIGHT MANIFEST */}
-                <Card title="✈ FLIGHT MANIFEST" variant="dark" className="flex-1" noPadding>
-                    <div className="flex flex-col gap-1 p-3">
-                        {[0, 1, 2, 3].map(slotIdx => {
-                            const pilot = localParty.find(p => p.id === slotIdx);
-                            if (pilot) {
-                                const isReady = pilot.ui.status === 'ready';
-                                return (
-                                    <div
-                                        key={slotIdx}
-                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all ${isReady
-                                            ? 'bg-green-900/20 border-green-500/30'
-                                            : 'bg-white/5 border-white/5'
-                                            }`}
-                                    >
-                                        {/* Color dot */}
-                                        <div
-                                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-lg"
-                                            style={{ backgroundColor: pilot.color, boxShadow: `0 0 8px ${pilot.color}40` }}
-                                        />
-                                        {/* Name + plane */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="text-xs font-bold text-white uppercase tracking-wider truncate">
-                                                {pilot.name}
-                                            </div>
-                                            <div className="text-[9px] font-mono text-slate-500 uppercase">
-                                                {pilot.airplane}
-                                            </div>
-                                        </div>
-                                        {/* Ready indicator */}
-                                        <div className={`text-[8px] font-bold uppercase tracking-widest ${isReady ? 'text-green-400' : 'text-slate-600'
-                                            }`}>
-                                            {isReady ? 'RDY' : 'STBY'}
-                                        </div>
-                                    </div>
-                                );
-                            }
-                            // Empty slot
-                            return (
-                                <div
-                                    key={slotIdx}
-                                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-dashed border-white/5 bg-transparent"
-                                >
-                                    <div className="w-2.5 h-2.5 rounded-full bg-white/10 shrink-0" />
-                                    <span className="text-[10px] font-mono text-slate-700 uppercase">
-                                        Empty Slot
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Card>
-
-                {/* MISSION BRIEF */}
-                <Card title="📋 MISSION BRIEF" variant="dark" noPadding>
-                    <div className="p-3 space-y-2">
-                        <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-mono text-slate-500 uppercase">Sortie Type</span>
-                            <span className="text-xs font-bold text-white uppercase tracking-wider">{modeName}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-mono text-slate-500 uppercase">Objectives</span>
-                            <span className="text-[10px] font-mono text-slate-400">None — Free Ops</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-mono text-slate-500 uppercase">Rules of Engagement</span>
-                            <span className="text-[10px] font-mono text-slate-400">Unrestricted</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-mono text-slate-500 uppercase">Time Limit</span>
-                            <span className="text-[10px] font-mono text-slate-400">Unlimited</span>
-                        </div>
-                    </div>
-                </Card>
-            </div>
-
-            {/* RIGHT COLUMN: AO + Controls + Launch */}
-            <div className="flex-1 flex flex-col gap-4 min-w-0">
-
-                {/* AREA OF OPERATIONS — 3D Planet Preview */}
-                <div className="flex-1 rounded-xl border border-white/10 relative overflow-hidden min-h-[300px]">
-                    {/* Section label */}
-                    <div className="absolute top-0 left-0 right-0 z-10 px-4 py-2 bg-gradient-to-b from-black/60 to-transparent">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+        return (
+            <div className={`w-full h-full flex ${isPortrait ? 'flex-col' : 'flex-row'}`}>
+                {/* Preview side */}
+                <div className={`relative overflow-hidden ${isPortrait ? 'h-1/2 w-full' : 'w-1/2 h-full order-2'}`}>
+                    <PlanetPreview />
+                    <div className="absolute top-0 left-0 right-0 z-10 px-3 py-1.5 bg-gradient-to-b from-black/60 to-transparent">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
                             🌍 Area of Operations
                         </span>
                     </div>
-                    <PlanetPreview />
                 </div>
 
-                {/* TERRAIN CONFIG */}
-                <Card variant="glass" noPadding>
-                    <div className="px-4 py-3 space-y-2.5">
-                        <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Terrain Parameters</span>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-mono text-slate-600">SEED: {terrainSeed}</span>
-                                <button
-                                    onClick={generateNewTerrain}
-                                    className="text-[10px] px-2 py-0.5 rounded border border-white/10 text-slate-400
-                                        hover:text-white hover:border-blue-500/50 hover:bg-blue-600/10 transition-all"
-                                    title="Randomize Terrain"
-                                >
-                                    🔄
-                                </button>
-                            </div>
-                        </div>
-                        <TerrainSlider label="Planet Size" paramKey="planetRadius" min={5} max={100} step={1} />
-                        <TerrainSlider label="Mountains" paramKey="mountainScale" min={0} max={2} step={0.1} />
-                        <TerrainSlider label="Water Level" paramKey="waterLevel" min={0} max={1} step={0.05} />
-                        <TerrainSlider label="Mtn Frequency" paramKey="mountainFrequency" min={0.1} max={5} step={0.1} />
-                    </div>
-                </Card>
-
-                {/* LAUNCH BUTTON */}
-                <button
-                    onClick={handleLaunch}
-                    className="w-full py-4 rounded-xl font-black text-lg uppercase tracking-[0.2em] transition-all duration-300
-                        bg-gradient-to-r from-blue-600 to-blue-500 text-white
-                        hover:from-blue-500 hover:to-blue-400 hover:shadow-[0_0_30px_rgba(59,130,246,0.3)]
-                        active:scale-[0.98]"
+                {/* Carousel side */}
+                <div
+                    className={`flex flex-col ${isPortrait ? 'h-1/2 w-full' : 'w-1/2 h-full order-1'}`}
+                    onTouchStart={onTouchStart}
+                    onTouchEnd={onTouchEnd}
                 >
-                    Launch
-                </button>
+                    <div className="flex-1 min-h-0 overflow-hidden">
+                        <Card noPadding variant="dark" className="h-full rounded-none border-0">
+                            {renderPanel(activePanel)}
+                        </Card>
+                    </div>
+                    <div className="bg-black/80 border-t border-white/5">
+                        <CarouselIndicator panels={PANEL_LABELS} activeIndex={carouselIndex} />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ─── GRID LAYOUT (desktop / TV) ─────────────────────────────
+
+    return (
+        <div className="w-full h-full flex flex-row">
+            {/* Left: 3 columns */}
+            <div className="flex-1 flex flex-col min-w-0 h-full p-3 gap-3">
+                <div className="flex-1 min-h-0 flex flex-row gap-3">
+                    {LOBBY_PANELS.map(panelId => (
+                        <Card
+                            key={panelId}
+                            title={PANEL_TITLES[panelId]}
+                            focused={showFocus && focusedZone === panelId}
+                            noPadding
+                            variant="dark"
+                            className="flex-1 min-w-0 flex flex-col"
+                        >
+                            {renderPanel(panelId)}
+                        </Card>
+                    ))}
+                </div>
             </div>
 
+            {/* Right: Planet Preview */}
+            <div className="w-[33%] max-w-[40%] h-full relative overflow-hidden border-l border-white/10">
+                <PlanetPreview />
+                <div className="absolute top-0 left-0 right-0 z-10 px-4 py-2 bg-gradient-to-b from-black/60 to-transparent">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        🌍 Area of Operations
+                    </span>
+                </div>
+            </div>
         </div>
     );
 };

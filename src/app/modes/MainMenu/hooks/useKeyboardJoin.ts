@@ -23,8 +23,8 @@ export const useKeyboardJoin = () => {
                 }
             }
 
-            // Enter -> Join as KB2
-            if (e.code === 'Enter') {
+            // Numpad1 -> Join as KB2
+            if (e.code === 'Numpad1') {
                 const hasKb2 = localParty.some(p => p.input.deviceId === 'kb2');
                 if (!hasKb2) {
                     for (let i = 0; i < 4; i++) {

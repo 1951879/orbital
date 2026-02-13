@@ -11,6 +11,7 @@ const TABS: MainMenuScreen[] = ['squadron', 'operations', 'briefing'];
 export const MainMenuContainer: React.FC = () => {
     const currentScreen = useMainMenuStore((state) => state.currentScreen);
     const setScreen = useMainMenuStore((state) => state.setScreen);
+    const inLobby = useMainMenuStore((state) => state.inLobby);
 
     // Input Handling for Tab Navigation
     useEffect(() => {
@@ -19,20 +20,22 @@ export const MainMenuContainer: React.FC = () => {
             // TODO: Better "Is Host" check? For now, ID 0 is host.
             if (playerId !== 0) return;
 
+            const maxIndex = inLobby ? TABS.length - 1 : TABS.indexOf('briefing') - 1;
+
             if (action === 'TAB_NEXT') {
                 const currentIndex = TABS.indexOf(currentScreen);
-                const nextIndex = (currentIndex + 1) % TABS.length;
-                setScreen(TABS[nextIndex]);
+                const nextIndex = currentIndex + 1;
+                if (nextIndex <= maxIndex) setScreen(TABS[nextIndex]);
             } else if (action === 'TAB_PREV') {
                 const currentIndex = TABS.indexOf(currentScreen);
-                const prevIndex = (currentIndex - 1 + TABS.length) % TABS.length;
-                setScreen(TABS[prevIndex]);
+                const prevIndex = currentIndex - 1;
+                if (prevIndex >= 0) setScreen(TABS[prevIndex]);
             }
         };
 
         const cleanup = SessionState.onInput(handleInput);
         return () => { cleanup(); };
-    }, [currentScreen, setScreen]);
+    }, [currentScreen, setScreen, inLobby]);
 
     // Render Active Screen
     const renderScreen = () => {

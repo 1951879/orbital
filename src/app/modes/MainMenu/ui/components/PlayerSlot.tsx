@@ -8,6 +8,7 @@ import { PLANES } from '@/src/app/components/ui/tabs/data';
 import { useSlotInput } from '../../hooks/useSlotInput';
 import { GamepadButton } from '@/src/app/core/ui/GamepadIcons';
 import { useSlotHints } from '../../hooks/useInputHints';
+import { ReadyToggle } from './ReadyToggle';
 
 // --- CONTROLS COMPONENT ---
 const SlotControls: React.FC<{ gamepadIndex: number }> = ({ gamepadIndex }) => {
@@ -122,7 +123,8 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
         {
             onPrev: () => handleCycle(-1),
             onNext: () => handleCycle(1),
-            onConfirm: handleReady
+            onConfirm: () => { /* Maybe handle Join if not active? But this hook is only for active pilot usually unless we change logic */ },
+            onReady: handleReady
         }
     );
 
@@ -143,7 +145,7 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
                     <span className="text-sm font-bold uppercase text-white/40 group-hover:text-white tracking-widest flex items-center gap-2">
                         <span className=" px-1 border border-white/40 rounded flex items-center justify-center text-xs">F</span>
                         <span className="text-[10px]">or</span>
-                        <span className=" px-1 border border-white/40 rounded flex items-center justify-center text-xs">ENTER</span>
+                        <span className=" px-1 border border-white/40 rounded flex items-center justify-center text-xs">NUM 1</span>
                     </span>
                 ) : (
                     <span className="text-sm font-bold uppercase text-white/40 group-hover:text-white tracking-widest">Tap to Join</span>
@@ -187,8 +189,8 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
                                 </>
                             ) : hints.showKeyboard ? (
                                 <>
-                                    <span className="w-4 h-4 border border-white rounded flex items-center justify-center text-[9px] text-white">
-                                        {hints.keyboardDevice === 'kb2' ? ']' : 'R'}
+                                    <span className="min-w-[16px] h-4 px-1 border border-white rounded flex items-center justify-center text-[9px] text-white">
+                                        {hints.keyboardDevice === 'kb2' ? 'NUM 2' : 'G'}
                                     </span>
                                     <span className="text-[9px] font-bold text-white uppercase shadow-black drop-shadow-md">Hold</span>
                                 </>
@@ -212,8 +214,8 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
                         {hints.showGamepad ? (
                             <GamepadButton type={hints.gamepadType} button="DPadLeft" />
                         ) : hints.showKeyboard ? (
-                            <span className="w-4 h-4 border border-white/70 rounded flex items-center justify-center text-[8px] text-white">
-                                {hints.keyboardDevice === 'kb2' ? 'L' : 'A'}
+                            <span className="min-w-[16px] h-4 px-1 border border-white/70 rounded flex items-center justify-center text-[8px] text-white">
+                                {hints.keyboardDevice === 'kb2' ? '←' : 'A'}
                             </span>
                         ) : null}
                         <button
@@ -240,8 +242,8 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
                         {hints.showGamepad ? (
                             <GamepadButton type={hints.gamepadType} button="DPadRight" />
                         ) : hints.showKeyboard ? (
-                            <span className="w-4 h-4 border border-white/70 rounded flex items-center justify-center text-[8px] text-white">
-                                {hints.keyboardDevice === 'kb2' ? "'" : 'D'}
+                            <span className="min-w-[16px] h-4 px-1 border border-white/70 rounded flex items-center justify-center text-[8px] text-white">
+                                {hints.keyboardDevice === 'kb2' ? '→' : 'D'}
                             </span>
                         ) : null}
                     </div>
@@ -256,28 +258,11 @@ export const PlayerSlot: React.FC<PlayerSlotProps> = ({ index }) => {
                 </span>
 
                 {/* Right: Ready Check */}
-                <div
-                    className="flex items-center gap-2 cursor-pointer group"
+                <ReadyToggle
+                    isReady={isReady}
+                    hints={hints}
                     onClick={handleReady}
-                >
-                    <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${isReady ? 'text-green-400' : 'text-slate-500 group-hover:text-slate-300'} flex items-center gap-2`}>
-                        {hints.showGamepad ? (
-                            <GamepadButton type={hints.gamepadType} button="A" />
-                        ) : hints.showKeyboard ? (
-                            <span className="w-auto min-w-[16px] h-4 border border-current rounded flex items-center justify-center text-[9px] px-1">
-                                {hints.keyboardDevice === 'kb2' ? 'ENTER' : 'F'}
-                            </span>
-                        ) : null}
-                        READY
-                    </span>
-                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-all ${isReady ? 'bg-green-500 border-green-500 text-black' : 'border-slate-600 group-hover:border-slate-400 bg-transparent'}`}>
-                        {isReady && (
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
-                                <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 01.208 1.04l-9 13.5a.75.75 0 01-1.154.114l-6-6a.75.75 0 011.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 011.04-.208z" clipRule="evenodd" />
-                            </svg>
-                        )}
-                    </div>
-                </div>
+                />
             </div>
         </div>
     );

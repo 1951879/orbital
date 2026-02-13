@@ -20,6 +20,7 @@ export const PlaySelectScreen: React.FC = () => {
     const setScreen = useMainMenuStore(state => state.setScreen);
     const selectedMode = useMainMenuStore(state => state.selectedModeFilter);
     const setSelectedMode = useMainMenuStore(state => state.setSelectedModeFilter);
+    const setInLobby = useMainMenuStore(state => state.setInLobby);
 
     // Vertical cursor for the lobby list (0 = Create button, 1+ = lobbies)
     const [listIndex, setListIndex] = useState(0);
@@ -34,8 +35,9 @@ export const PlaySelectScreen: React.FC = () => {
 
     const handleCreate = useCallback(() => {
         console.log('[PlaySelect] Creating operation:', selectedMode);
+        setInLobby(true);
         setScreen('briefing');
-    }, [selectedMode, setScreen]);
+    }, [selectedMode, setScreen, setInLobby]);
 
     // --- Input Handling ---
     useEffect(() => {
@@ -124,13 +126,13 @@ export const PlaySelectScreen: React.FC = () => {
             <button
                 onClick={handleCreate}
                 className={`group w-full flex items-center gap-3 px-5 py-4 rounded-xl border transition-all duration-300 ${listIndex === 0
-                        ? 'border-blue-500/50 bg-blue-600/10 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
-                        : 'border-dashed border-white/10 bg-white/[0.02] hover:border-blue-500/50 hover:bg-blue-600/10'
+                    ? 'border-blue-500/50 bg-blue-600/10 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
+                    : 'border-dashed border-white/10 bg-white/[0.02] hover:border-blue-500/50 hover:bg-blue-600/10'
                     }`}
             >
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg transition-all ${listIndex === 0
-                        ? 'bg-blue-600/40 text-blue-300'
-                        : 'bg-blue-600/20 text-blue-400 group-hover:bg-blue-600/40'
+                    ? 'bg-blue-600/40 text-blue-300'
+                    : 'bg-blue-600/20 text-blue-400 group-hover:bg-blue-600/40'
                     }`}>
                     +
                 </div>

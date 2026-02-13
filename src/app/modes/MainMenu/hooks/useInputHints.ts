@@ -17,6 +17,7 @@ export interface HintMode {
     showKeyboard: boolean;
     gamepadType: GamepadType | null;
     keyboardDevice: string; // 'kb1' | 'kb2'
+    keyboardReadyKey?: string; // key name for the Ready action
 }
 
 const NONE: HintMode = { showGamepad: false, showKeyboard: false, gamepadType: null, keyboardDevice: 'kb1' };
@@ -35,13 +36,13 @@ const isTouchPrimaryDevice = (): boolean => {
 
 /**
  * Hint mode for a specific player slot.
- * @param pilot The pilot in the slot, or undefined for empty slot.
- * @param targetGpIndex Gamepad index to detect type for (undefined = global/fallback).
  */
 export const useSlotHints = (pilot: LocalPilot | undefined): HintMode => {
     // For gamepad detection: use pilot's gamepad index if they're on gamepad, otherwise global fallback
     const targetGpIndex = (pilot && pilot.input.type === 'gamepad') ? pilot.input.gamepadIndex : undefined;
     const detectedType = useGamepadDetector(targetGpIndex);
+
+    const getReadyKey = (deviceId: string) => deviceId === 'kb2' ? '4' : 'R';
 
     if (!pilot) {
         // Empty slot
@@ -52,6 +53,7 @@ export const useSlotHints = (pilot: LocalPilot | undefined): HintMode => {
             showKeyboard: !hasGamepad && hasKeyboard,
             gamepadType: detectedType,
             keyboardDevice: 'kb1',
+            keyboardReadyKey: 'R' // Default to KB1
         };
     }
 
@@ -73,22 +75,24 @@ export const useSlotHints = (pilot: LocalPilot | undefined): HintMode => {
         showKeyboard: true,
         gamepadType: null,
         keyboardDevice: pilot.input.deviceId,
+        keyboardReadyKey: getReadyKey(pilot.input.deviceId)
     };
 };
 
 /**
- * Hint mode for global / host-level UI (Header tabs, etc.).
- * If host is touch, returns NONE so no hints pollute the global UI.
+ * Hint mode for global / host-level UI.
  */
 export const useHostHints = (): HintMode => {
+    // ... (host logic) ...
     const localParty = useStore(state => state.localParty);
     const host = localParty.find(p => p.id === 0);
 
     const hostGpIndex = (host && host.input.type === 'gamepad') ? host.input.gamepadIndex : undefined;
     const detectedType = useGamepadDetector(hostGpIndex);
 
+    const getReadyKey = (deviceId: string) => deviceId === 'kb2' ? '4' : 'R';
+
     if (!host) {
-        // No host yet — show keyboard hints only if non-touch device
         const hasGamepad = !!detectedType;
         const hasKeyboard = !isTouchPrimaryDevice();
         return {
@@ -96,6 +100,7 @@ export const useHostHints = (): HintMode => {
             showKeyboard: !hasGamepad && hasKeyboard,
             gamepadType: detectedType,
             keyboardDevice: 'kb1',
+            keyboardReadyKey: 'R'
         };
     }
 
@@ -110,11 +115,11 @@ export const useHostHints = (): HintMode => {
         };
     }
 
-    // Keyboard host
     return {
         showGamepad: false,
         showKeyboard: true,
         gamepadType: null,
         keyboardDevice: host.input.deviceId,
+        keyboardReadyKey: getReadyKey(host.input.deviceId)
     };
 };
