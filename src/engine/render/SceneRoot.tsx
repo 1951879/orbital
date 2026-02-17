@@ -20,7 +20,6 @@ import { GameMode } from '../mode/GameMode';
 
 // Define the Interface for Engine Configuration
 export interface EngineConfig {
-    isPaused: boolean;
     mission: string;
     localParty: any[]; // Todo: Define strict type or keep generic array
     terrainSeed: number;
@@ -37,7 +36,7 @@ export const SceneRoot: React.FC<{
     const viewRefs = React.useRef<(HTMLDivElement | null)[]>([]);
 
     // Destructure Config
-    const { isPaused, mission, localParty, terrainSeed, terrainParams } = config;
+    const { mission, localParty, terrainSeed, terrainParams } = config;
 
     // Determines Active Mode
     // Fallback to first available mode if mission not found? Or handled by App?
@@ -54,11 +53,13 @@ export const SceneRoot: React.FC<{
 
     // Sync Pointer Lock
     useEffect(() => {
-        DeviceManager.setPointerLockEnabled(!isPaused);
-    }, [isPaused]);
+        DeviceManager.setPointerLockEnabled(mission !== 'main_menu');
+    }, [mission]);
 
     // Initialize Engine & Mode
     useEffect(() => {
+        let unregisterLoop: (() => void) | undefined;
+
         const initEngine = async () => {
             // 0. Init Managers
             TerrainManager.instance.updateConfig(
@@ -72,8 +73,8 @@ export const SceneRoot: React.FC<{
             // 1. Init Mode
             activeMode.init();
 
-            // 2. Register Loop
-            Loop.register(() => {
+            // 2. Register Loop (capture unsubscribe to prevent callback accumulation)
+            unregisterLoop = Loop.register(() => {
                 const dt = 0.016; // Fixed timestep target
                 WorldState.update(dt);
                 // SessionState.update(dt); // Moved to Loop.ts (Kernel)
@@ -88,6 +89,7 @@ export const SceneRoot: React.FC<{
 
         const cleanup = () => {
             Loop.stop();
+            if (unregisterLoop) unregisterLoop();
             activeMode.dispose();
             DeviceManager.cleanup();
             WorldState.reset();
@@ -99,7 +101,10 @@ export const SceneRoot: React.FC<{
 
     if (!ready) return <div className="absolute inset-0 flex items-center justify-center text-white bg-slate-900">Initializing Engine...</div>;
 
-    const isFlying = !isPaused;
+    const isFlying = mission !== 'main_menu';
+    const layoutOverride = activeMode.getLayoutOverride?.();
+    const useSplitScreen = isFlying && layoutOverride !== 'single';
+    const useSingleView = !isFlying || layoutOverride === 'single';
 
     return (
         <div className="absolute inset-0 bg-slate-950" style={{ touchAction: 'none' }}>
@@ -118,7 +123,7 @@ export const SceneRoot: React.FC<{
                 <activeMode.SceneComponent />
 
                 {/* VIEWPORT SYSTEM (Cameras) */}
-                {isFlying && activeMode.ViewportComponent && (
+                {useSplitScreen && activeMode.ViewportComponent && (
                     <HTMLStencilViewportSystem viewRefs={viewRefs}>
                         {(player, cameraRef) => (
                             <activeMode.ViewportComponent
@@ -130,9 +135,9 @@ export const SceneRoot: React.FC<{
                     </HTMLStencilViewportSystem>
                 )}
 
-                {!isFlying && (
+                {useSingleView && (
                     <activeMode.ViewportComponent
-                        player={{ id: 0 }}
+                        player={{ id: 0 }} // Force ID 0 (Host/Observer)
                         cameraRef={null}
                         cameras={cameras} // Injecting Cameras Here
                     />
@@ -144,7 +149,7 @@ export const SceneRoot: React.FC<{
             </Canvas>
 
             {/* STENCIL LAYOUT */}
-            {isFlying && (
+            {useSplitScreen && (
                 <ViewportStencilLayout
                     playerCount={localParty.length}
                     onRefsReady={(refs) => { viewRefs.current = refs; }}

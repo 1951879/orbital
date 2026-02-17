@@ -1,19 +1,17 @@
 
 import React from 'react';
-// Fix: Import ThreeElements to provide JSX intrinsic types
+import { Vector3 } from 'three';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../../effects/JetExhaust';
-import { AIRPLANE_SCALES } from '../AirplaneConfig';
+import { AirplaneDef, AirplaneModelProps } from './AirplaneDef';
 
-export const Bomber: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
+const Bomber: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleRef, scale }) => {
     const effectiveThrottle = throttle ?? 0.5;
-    // ...
-
 
     const colors = { main: '#f97316', highlight: '#22d3ee', engine: '#1c1917', canopy: '#10b981' };
 
     return (
-        <group scale={[AIRPLANE_SCALES.scout, AIRPLANE_SCALES.scout, AIRPLANE_SCALES.scout]}>
+        <group scale={[scale, scale, scale]}>
             <mesh rotation={[Math.PI / 2, 0, 0]}>
                 <cylinderGeometry args={[0.5, 0.6, 2.2, 6]} />
                 <meshStandardMaterial color={colors.main} roughness={0.4} metalness={0.3} />
@@ -54,3 +52,27 @@ export const Bomber: React.FC<{ playerId?: number, throttle?: number, throttleRe
         </group>
     );
 };
+
+export default {
+    type: 'bomber',
+    name: 'Heavy Bomber',
+    description: 'High durability, low speed.',
+    scale: 0.4,
+    collisionPoints: [
+        new Vector3(0, -0.8, 2.5),
+        new Vector3(0, 0.8, 2.5),
+        new Vector3(0, -0.6, -2.5),
+        new Vector3(0, 1.2, -2.5),
+        new Vector3(4.5, 0, 0),
+        new Vector3(-4.5, 0, 0),
+        new Vector3(1.2, -0.9, -0.5),
+        new Vector3(-1.2, -0.9, -0.5),
+    ],
+    audio: {
+        engineBaseFreq: 50, engineType: 'square', engineMix: 0.35,
+        whineBaseFreq: 300, whineType: 'sine', whineModulation: 100, whineMix: 0.01,
+        rumbleMix: 1.4, rumbleFilterFreq: 400,
+        windMix: 0.8, windTone: 50, maneuverNoiseOffset: 3.0, volMult: 0.35,
+    },
+    Component: Bomber,
+} satisfies AirplaneDef;

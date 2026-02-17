@@ -1,20 +1,10 @@
 
 import { AirplaneType, TerrainParams } from '../../../../types';
+import { PLANES as REGISTRY_PLANES } from '../../../core/entities/Airplane/registry';
 
-export const PLANES: { id: AirplaneType; name: string; desc: string }[] = [
-  { id: 'interceptor', name: 'Interceptor', desc: 'Balanced multi-role fighter.' },
-  { id: 'raptor', name: 'Stealth Raptor', desc: 'Air superiority fighter.' },
-  { id: 'bomber', name: 'Heavy Bomber', desc: 'High durability, low speed.' },
-  { id: 'scout', name: 'Adv. Scout', desc: 'High speed reconnaissance.' },
-  { id: 'viper', name: 'Viper Zero', desc: 'Forward-swept aggression.' },
-  { id: 'manta', name: 'Deep Manta', desc: 'Experimental bio-wing.' },
-  { id: 'corsair', name: 'Corsair II', desc: 'Bent-wing naval striker.' },
-  { id: 'eagle', name: 'Golden Eagle', desc: 'Heavy orbital cruiser.' },
-  { id: 'falcon', name: 'Falcon X', desc: 'Hyper-agile interceptor.' },
-  { id: 'tempest', name: 'Tempest Heavy', desc: 'Twin-boom heavy fighter.' },
-  { id: 'phantom', name: 'Phantom Ray', desc: 'Stealth drone prototype.' },
-  { id: 'starling', name: 'Starling Racer', desc: 'Civilian racing modification.' },
-];
+// Re-export planes from the registry — no more manual duplication.
+export const PLANES: { id: AirplaneType; name: string; desc: string }[] =
+  REGISTRY_PLANES as { id: AirplaneType; name: string; desc: string }[];
 
 export const PRESETS: { name: string; desc: string; params: Partial<TerrainParams> }[] = [
   { name: 'Tiny', desc: 'Dense & jagged.', params: { planetRadius: 30, waterLevel: 0.40, mountainScale: 0.85, mountainFrequency: 4.0 } },

@@ -32,9 +32,11 @@ export const StartIcon = ({ className = "" }: { className?: string }) => (
 
 export const SelectIcon = ({ className = "" }: { className?: string }) => (
     <div className={`${baseClass} w-5 h-5 rounded-full text-[9px] border bg-slate-700 border-slate-500 text-white flex items-center justify-center ${className}`}>
-        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="5" y="5" width="6" height="6" rx="1" />
-            <path d="M2 5V4a1 1 0 0 1 1-1h6" />
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {/* Back Square (extended vertical line and properly spaced) */}
+            <path d="M4 12 V5 a1 1 0 0 1 1-1 h10 v3" />
+            {/* Front Square (smaller 10x10 and shifted) */}
+            <rect x="9" y="9" width="10" height="10" rx="1.5" />
         </svg>
     </div>
 );
@@ -126,14 +128,18 @@ export const CircleIcon = ({ className = "" }: { className?: string }) => (
 );
 
 export const SquareIcon = ({ className = "" }: { className?: string }) => (
-    <div className={`${baseClass} ${roundClass} bg-pink-500 border-pink-300 text-white ${className}`}>
-        <rect x="7" y="7" width="10" height="10" stroke="currentColor" strokeWidth="4" fill="none" />
+    <div className={`${baseClass} ${roundClass} bg-pink-600 border-pink-400 text-white ${className}`}>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={4} stroke="currentColor" className="w-2.5 h-2.5">
+            <rect x="4" y="4" width="16" height="16" />
+        </svg>
     </div>
 );
 
 export const TriangleIcon = ({ className = "" }: { className?: string }) => (
-    <div className={`${baseClass} ${roundClass} bg-green-500 border-green-300 text-white ${className}`}>
-        <path d="M12 6L6 18H18L12 6Z" stroke="currentColor" strokeWidth="4" fill="none" transform="scale(0.8) translate(3,3)" />
+    <div className={`${baseClass} ${roundClass} bg-green-600 border-green-400 text-white ${className}`}>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={4} stroke="currentColor" className="w-2.5 h-2.5">
+            <path d="M12 4L4 20H20L12 4Z" />
+        </svg>
     </div>
 );
 
@@ -153,7 +159,7 @@ export const R2Icon = ({ className = "" }: { className?: string }) => (
 
 
 // --- SMART COMPONENT ---
-import { GamepadType } from './useGamepadDetector';
+import { GamepadType } from '../hooks/useGamepadDetector';
 
 interface GamepadButtonProps {
     type: GamepadType | null;

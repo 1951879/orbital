@@ -5,6 +5,7 @@ import { HubScreen } from './screens/HubScreen';
 import { PlaySelectScreen } from './screens/PlaySelectScreen';
 import { LobbyScreen } from './screens/LobbyScreen';
 import { SessionState } from '../../../../engine/session/SessionState';
+import { useStore } from '../../../store/useStore';
 
 const TABS: MainMenuScreen[] = ['squadron', 'operations', 'briefing'];
 
@@ -30,6 +31,26 @@ export const MainMenuContainer: React.FC = () => {
                 const currentIndex = TABS.indexOf(currentScreen);
                 const prevIndex = currentIndex - 1;
                 if (prevIndex >= 0) setScreen(TABS[prevIndex]);
+            } else if (action === 'LAUNCH') {
+                // Check if Host, In Lobby, and All Ready
+                // We need access to these states. They are not currently in scope of this effect.
+                // We should move this logic or access state here.
+                // However, the LaunchButton component has this logic.
+                // We should probably expose a "launch" function or duplicate the check.
+                // Let's duplicate the check for now as it's simple.
+                const localParty = useStore.getState().localParty; // Access via getState to avoid stale closure if not in dependency
+                const isHost = localParty.some(p => p.id === 0);
+                const allReady = localParty.length > 0 && localParty.every(p => p.ui.status === 'ready');
+
+                if (inLobby && allReady && isHost) {
+                    console.log('[MainMenuContainer] Gamepad Launch');
+                    useStore.getState().setMission('free');
+                }
+            } else if (action === 'ABORT') {
+                if (inLobby) {
+                    useMainMenuStore.getState().setInLobby(false);
+                    setScreen('operations');
+                }
             }
         };
 

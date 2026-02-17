@@ -1,12 +1,12 @@
-import React, { useMemo, useCallback, useRef } from 'react';
-import { View, PerspectiveCamera, OrbitControls } from '@react-three/drei';
-import { useThree, useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
+import React, { useMemo, useCallback } from 'react';
+import { View, PerspectiveCamera } from '@react-three/drei';
+
 import { useStore } from '../../../../store/useStore';
 import { useMainMenuStore, LOBBY_PANELS } from '../../MainMenuStore';
 import { BlueprintSphere } from '../../../../core/env/BlueprintSphere';
 import { SunLight } from '../../../../core/env/SunLight';
 import { useLayoutMode } from '../../hooks/useLayoutMode';
+import { OrbitCamera } from '../../../../core/cameras/OrbitCamera';
 import { useLobbyInput, LobbyPanelDescriptor } from '../../hooks/useLobbyInput';
 import { Card } from '../kit/Card';
 import { CarouselIndicator } from '../kit/CarouselIndicator';
@@ -14,6 +14,7 @@ import { RosterPanel } from '../panels/RosterPanel';
 import { MissionPanel } from '../panels/MissionPanel';
 import { TerrainPanel } from '../panels/TerrainPanel';
 import { SessionState } from '../../../../../engine/session/SessionState';
+import { useHostHints } from '../../../../core/hooks/useInputHints';
 import { PRESETS } from '../../../../components/ui/tabs/data';
 import { TerrainParams } from '../../../../../types';
 
@@ -34,44 +35,6 @@ const PANEL_TITLES: Record<string, string> = {
 // ─── PLANET PREVIEW ──────────────────────────────────────────────────────────
 
 const PREVIEW_FOV = 45;
-// Tight fit — atmosphere/mountains should just kiss the narrower edges
-const PREVIEW_PADDING = 1.05;
-
-/**
- * Sets the camera to an ideal distance on mount and whenever the
- * planet radius changes. Does NOT continuously override — manual
- * zoom via OrbitControls still works after the initial fit.
- */
-const CameraFitter: React.FC<{ radius: number }> = ({ radius }) => {
-    const { camera, size } = useThree();
-    const lastRadius = useRef(0);
-
-    useFrame(() => {
-        if (!(camera instanceof THREE.PerspectiveCamera)) return;
-        // Only snap when the radius actually changes (preset switch or first frame)
-        if (radius === lastRadius.current) return;
-        lastRadius.current = radius;
-
-        // Account for mountains poking above the base sphere
-        const mountainScale = useStore.getState().terrainParams.mountainScale;
-        const visualRadius = radius * (1 + mountainScale * 0.08);
-
-        const aspect = size.width / size.height;
-        const halfFov = (camera.fov / 2) * (Math.PI / 180);
-
-        // Fit to whichever dimension is narrower
-        const distV = visualRadius / Math.sin(halfFov);
-        const halfFovH = Math.atan(Math.tan(halfFov) * aspect);
-        const distH = visualRadius / Math.sin(halfFovH);
-        const idealDist = Math.max(distV, distH) * PREVIEW_PADDING;
-
-        const dir = camera.position.clone().normalize();
-        if (dir.lengthSq() === 0) dir.set(0, 0.3, 1).normalize();
-        camera.position.copy(dir.multiplyScalar(idealDist));
-    });
-
-    return null;
-};
 
 const PlanetPreview: React.FC = () => {
     const planetRadius = useStore(state => state.terrainParams.planetRadius);
@@ -80,15 +43,12 @@ const PlanetPreview: React.FC = () => {
     return (
         <View className="absolute inset-0">
             <PerspectiveCamera makeDefault position={[0, initDist * 0.3, initDist]} fov={PREVIEW_FOV} />
-            <OrbitControls
-                enablePan={false}
-                enableZoom={true}
-                minDistance={planetRadius * 1.7}
-                maxDistance={planetRadius * 8}
+            <OrbitCamera
                 autoRotate
                 autoRotateSpeed={0.05}
+                minDistance={planetRadius * 1.7}
+                maxDistance={planetRadius * 8}
             />
-            <CameraFitter radius={planetRadius} />
             <BlueprintSphere />
             <SunLight />
         </View>
@@ -102,6 +62,8 @@ export const LobbyScreen: React.FC = () => {
     const localParty = useStore(state => state.localParty);
     const setTerrainParam = useStore(state => state.setTerrainParam);
     const generateNewTerrain = useStore(state => state.generateNewTerrain);
+    const openRosterMenu = useMainMenuStore(state => state.openRosterMenu);
+    const hostHints = useHostHints();
 
     const isHost = localParty.some(p => p.id === 0);
 
@@ -259,7 +221,7 @@ export const LobbyScreen: React.FC = () => {
                             focused={showFocus && focusedZone === panelId}
                             noPadding
                             variant="dark"
-                            className="flex-1 min-w-0 flex flex-col"
+                            className={`flex-1 min-w-0 flex flex-col ${panelId === 'roster' && openRosterMenu !== null ? 'z-50 overflow-visible' : 'relative'}`}
                         >
                             {renderPanel(panelId)}
                         </Card>
@@ -276,6 +238,13 @@ export const LobbyScreen: React.FC = () => {
                     </span>
                 </div>
             </div>
-        </div>
+
+            {/* Dimmer for Roster Tray (Gamepad only) */}
+            {
+                openRosterMenu !== null && hostHints.showGamepad && (
+                    <div className="fixed inset-0 bg-black/40 z-40 transition-opacity duration-200" />
+                )
+            }
+        </div >
     );
 };

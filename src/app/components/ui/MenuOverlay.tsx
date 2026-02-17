@@ -20,7 +20,7 @@ const TABS: { id: MenuTabId | string, label: string }[] = [
 ];
 
 export const MenuOverlay: React.FC<{ onTogglePause: () => void }> = ({ onTogglePause }) => {
-    const isPaused = useStore((state) => state.isPaused);
+    // const isPaused = useStore((state) => state.isPaused); // REMOVED
     const localParty = useStore((state) => state.localParty);
     const activeTab = useStore((state) => state.activeMenuTab);
     const setActiveTab = useStore((state) => state.setActiveMenuTab);
@@ -58,7 +58,7 @@ export const MenuOverlay: React.FC<{ onTogglePause: () => void }> = ({ onToggleP
         setFocusIndex(0);
     }, [activeTab]);
 
-    useEffect(() => { setLaunchError(null); }, [activeTab, isPaused]);
+    useEffect(() => { setLaunchError(null); }, [activeTab]);
 
     // Fullscreen Detection
     useEffect(() => {
@@ -216,7 +216,7 @@ export const MenuOverlay: React.FC<{ onTogglePause: () => void }> = ({ onToggleP
         onReset: () => { }
     }), [activeTab, handleArcadeLaunch, onTogglePause, setActiveTab, handleNavigate, handleAction, handleAbortAction, isPendingLaunch, isMissionInProgress]);
 
-    useGamepadMenu(isPaused, gamepadHandlers, true, hostGamepadIndex);
+    useGamepadMenu(true, gamepadHandlers, true, hostGamepadIndex);
 
     const handleHeaderAction = () => {
         if (activeTab === 'hangar' || isPendingLaunch) {

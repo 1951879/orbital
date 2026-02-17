@@ -40,7 +40,6 @@ const CAMERAS: Record<string, React.FC<any>> = {
 
 const App: React.FC = () => {
   // Extract Engine Config from Store (App Layer)
-  const isPaused = useStore((state) => state.isPaused);
   const mission = useStore((state) => state.mission);
   const localParty = useStore((state) => state.localParty);
   const terrainSeed = useStore((state) => state.terrainSeed);
@@ -53,7 +52,6 @@ const App: React.FC = () => {
           modes={MODES}
           cameras={CAMERAS}
           config={{
-            isPaused,
             mission,
             localParty,
             terrainSeed,

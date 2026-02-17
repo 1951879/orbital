@@ -1,16 +1,17 @@
 
 import React from 'react';
+import { Vector3 } from 'three';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../../effects/JetExhaust';
-import { AIRPLANE_SCALES } from '../AirplaneConfig';
+import { AirplaneDef, AirplaneModelProps } from './AirplaneDef';
 
-export const Starling: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
+const Starling: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleRef, scale }) => {
     const effectiveThrottle = throttle ?? 0.5;
 
     const colors = { main: '#facc15', highlight: '#000000', engine: '#171717', canopy: '#0ea5e9' };
 
     return (
-        <group scale={[AIRPLANE_SCALES.starling, AIRPLANE_SCALES.starling, AIRPLANE_SCALES.starling]}>
+        <group scale={[scale, scale, scale]}>
             {/* Teardrop Body */}
             <mesh rotation={[Math.PI / 2, 0, 0]}>
                 <sphereGeometry args={[0.8, 16, 16]} />
@@ -62,3 +63,25 @@ export const Starling: React.FC<{ playerId?: number, throttle?: number, throttle
         </group>
     );
 };
+
+export default {
+    type: 'starling',
+    name: 'Starling Racer',
+    description: 'Civilian racing modification.',
+    scale: 0.3,
+    collisionPoints: [
+        new Vector3(0, -0.3, 1.2),
+        new Vector3(0, 0.3, 1.2),
+        new Vector3(0, -0.3, -1.0),
+        new Vector3(0, 0.6, -1.0),
+        new Vector3(1.5, 0, -0.2),
+        new Vector3(-1.5, 0, -0.2),
+    ],
+    audio: {
+        engineBaseFreq: 200, engineType: 'triangle', engineMix: 0.4,
+        whineBaseFreq: 600, whineType: 'square', whineModulation: 1200, whineMix: 0.08,
+        rumbleMix: 0.4, rumbleFilterFreq: 600,
+        windMix: 0.4, windTone: 1000, maneuverNoiseOffset: 1.8, volMult: 0.28,
+    },
+    Component: Starling,
+} satisfies AirplaneDef;

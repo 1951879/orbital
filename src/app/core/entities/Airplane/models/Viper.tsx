@@ -1,15 +1,13 @@
 
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
-// Fix: Import ThreeElements to provide JSX intrinsic types
+import { Vector3 } from 'three';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../../effects/JetExhaust';
-import { AIRPLANE_SCALES } from '../AirplaneConfig';
+import { AirplaneDef, AirplaneModelProps } from './AirplaneDef';
 
-export const Viper: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
+const Viper: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleRef, scale }) => {
     const effectiveThrottle = throttle ?? 0.5;
-    // ...
-
 
     const colors = { main: '#b91c1c', highlight: '#fca5a5', engine: '#18181b', canopy: '#0ea5e9' };
 
@@ -32,7 +30,7 @@ export const Viper: React.FC<{ playerId?: number, throttle?: number, throttleRef
     }, []);
 
     return (
-        <group scale={[AIRPLANE_SCALES.manta, AIRPLANE_SCALES.manta, AIRPLANE_SCALES.manta]}>
+        <group scale={[scale, scale, scale]}>
             {/* Fuselage */}
             <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.2]}>
                 <cylinderGeometry args={[0.2, 0.35, 2.5, 8]} />
@@ -82,3 +80,26 @@ export const Viper: React.FC<{ playerId?: number, throttle?: number, throttleRef
         </group>
     );
 };
+
+export default {
+    type: 'viper',
+    name: 'Viper Zero',
+    description: 'Forward-swept aggression.',
+    scale: 0.35,
+    collisionPoints: [
+        new Vector3(0, -0.4, 2.0),
+        new Vector3(0, 0.4, 2.0),
+        new Vector3(0, -0.4, -1.5),
+        new Vector3(0.5, 0.8, -1.5),
+        new Vector3(-0.5, 0.8, -1.5),
+        new Vector3(2.0, 0, 0.5),
+        new Vector3(-2.0, 0, 0.5),
+    ],
+    audio: {
+        engineBaseFreq: 140, engineType: 'sawtooth', engineMix: 0.25,
+        whineBaseFreq: 1200, whineType: 'triangle', whineModulation: 1500, whineMix: 0.08,
+        rumbleMix: 0.6, rumbleFilterFreq: 400,
+        windMix: 0.5, windTone: 600, maneuverNoiseOffset: 2.5, volMult: 0.32,
+    },
+    Component: Viper,
+} satisfies AirplaneDef;

@@ -1,29 +1,20 @@
 import React from 'react';
-import { useStore } from '../../store/useStore';
 
-export const PauseButton: React.FC = () => {
-    const isPaused = useStore((state) => state.isPaused);
-    const setIsPaused = useStore((state) => state.setIsPaused);
-    const playerCount = useStore((state) => state.localParty.length);
+interface PauseButtonProps {
+    onClick: () => void;
+    className?: string;
+}
 
-    if (isPaused) return null;
-
-    // Positioning Logic
-    // If single player: Top Right
-    // If split screen (2+ players): Center
-    const positionClass = playerCount > 1
-        ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'
-        : 'top-6 right-6';
-
+export const PauseButton: React.FC<PauseButtonProps> = ({ onClick, className }) => {
     return (
         <button
-            onClick={() => setIsPaused(true)}
+            onClick={onClick}
             className={`
-                absolute ${positionClass} z-50 pointer-events-auto
                 w-10 h-10 rounded-full bg-slate-900/50 backdrop-blur-md 
                 border border-white/20 hover:bg-slate-800/80 hover:border-white/50 
                 flex items-center justify-center text-white/70 hover:text-white 
-                transition-all duration-200 group
+                transition-all duration-200 group pointer-events-auto
+                ${className || ''}
             `}
             title="Pause Game"
         >

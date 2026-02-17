@@ -81,11 +81,11 @@ export const useSlotInput = (
                     // Check standard inputs against profile
                     const p = MAIN_MENU_GAMEPAD;
 
-                    const intentPrev = checkGamepad(p, 'NAV_LEFT', gp) || checkGamepad(p, 'TAB_PREV', gp);
-                    const intentNext = checkGamepad(p, 'NAV_RIGHT', gp) || checkGamepad(p, 'TAB_NEXT', gp);
+                    const intentPrev = checkGamepad(p, 'NAV_LEFT', gp);
+                    const intentNext = checkGamepad(p, 'NAV_RIGHT', gp);
                     const intentConfirm = checkGamepad(p, 'SELECT', gp);
                     const intentBack = checkGamepad(p, 'BACK', gp);
-                    const intentReady = checkGamepad(p, 'SELECT', gp); // Wait, Ready logic often same as Select or specialized?
+                    const intentReady = checkGamepad(p, 'MINOR', gp); // Wait, Ready logic often same as Select or specialized?
                     // RosterPanel passes onReady for 'X' usually. 
                     // But in Profile, X is mapped to... let's check profile. 
                     // The profile doesn't have "READY" action usually. 
@@ -98,13 +98,12 @@ export const useSlotInput = (
                     // But looking at MainMenuInput.ts, X is NOT in the profile.
                     // So we MUST keep hardcoded check for Button 2 (X) for Ready, OR explicit 'READY' action if added.
                     // Let's defer to hardcoded X for Ready if profile lacks it, to avoid regression.
-                    const buttonX = gp.buttons[2]?.pressed;
-
+               
                     const intentContext = checkGamepad(p, 'CONTEXT', gp);
 
                     // INITIALIZATION GUARD: Wait for button release
                     if (waitForRelease.current) {
-                        const isAnyPressed = intentPrev || intentNext || intentConfirm || intentBack || buttonX || intentContext;
+                        const isAnyPressed = intentPrev || intentNext || intentConfirm || intentBack || intentReady || intentContext;
                         if (!isAnyPressed) {
                             waitForRelease.current = false;
                         }

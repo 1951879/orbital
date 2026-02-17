@@ -26,10 +26,9 @@ export interface FlightTelemetry {
   roll: number;  // radians
 }
 
-export type AirplaneType =
-  | 'interceptor' | 'bomber' | 'scout' | 'raptor'
-  | 'viper' | 'manta' | 'corsair' | 'eagle'
-  | 'falcon' | 'tempest' | 'phantom' | 'starling';
+import { AIRPLANE_TYPES } from './app/core/entities/Airplane/registry';
+
+export type AirplaneType = (typeof AIRPLANE_TYPES)[number];
 
 export type GameMode = 'single' | 'splitscreen';
 
@@ -179,8 +178,7 @@ export interface AppState {
   setCameraTransitioning: (isTransitioning: boolean) => void;
 
   // Game State
-  isPaused: boolean;
-  setIsPaused: (isPaused: boolean) => void;
+  // isPaused removed - handled per-mode
 
   // Menu Persistence
   activeMenuTab: MenuTabId;

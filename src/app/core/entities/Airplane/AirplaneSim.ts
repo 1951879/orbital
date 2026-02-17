@@ -1,5 +1,6 @@
 import { Vector3, Quaternion, MathUtils, Euler } from 'three';
 import { AIRPLANE_CONFIG, COLLISION_POINTS, AIRPLANE_SCALES } from './AirplaneConfig';
+import { AIRPLANE_REGISTRY } from './registry';
 import { SessionState } from '../../../../engine/session/SessionState';
 import { HapticManager } from '../../../../engine/kernel/HapticManager';
 import { Time } from '../../../../engine/kernel/Time';
@@ -68,16 +69,23 @@ export class AirplaneSim implements ISimObject {
         };
     }
 
+    private stats = { turnSpeed: 1, maxSpeed: 1, acceleration: 1, agility: 1 };
+
     constructor(public readonly playerId: number, startPos: Vector3, type: AirplaneType = 'interceptor') {
         this.position.copy(startPos);
         this.altitude = startPos.length();
         this.type = type;
         this.throttle = 0;
+
+        // Load Stats
+        const def = AIRPLANE_REGISTRY[type];
+        if (def && def.stats) {
+            this.stats = { ...this.stats, ...def.stats };
+        }
     }
 
     public update() {
-        // 0. Pause Check
-        if (useStore.getState().isPaused) return;
+        // 0. Pause Check - Handled by Mode Loop
 
         const dt = Time.dt;
         const tuning = FlightTuning;
@@ -130,17 +138,17 @@ export class AirplaneSim implements ISimObject {
         // 1. Calculate Target Speed
         const baseSpeed = tuning.Speed.baseSpeed.value;
         const boostMult = bBoost ? tuning.Speed.boostMultiplier.value : 1.0;
-        const targetSpeed = baseSpeed * this.throttle * boostMult;
+        const targetSpeed = baseSpeed * this.throttle * boostMult * this.stats.maxSpeed;
 
         // Accelerate/Decelerate
-        this.currentSpeed = MathUtils.damp(this.currentSpeed, targetSpeed, tuning.Speed.accelerationRate.value, dt);
+        this.currentSpeed = MathUtils.damp(this.currentSpeed, targetSpeed, tuning.Speed.accelerationRate.value * this.stats.acceleration, dt);
 
         // 2. Agility Multipliers
         // Speed Ratio (0..1)
         const speedRatio = MathUtils.clamp(this.currentSpeed / baseSpeed, 0, 1);
 
         // Agility Curve: Planes turn better at slower speeds (to a point), stiffen up at high speed
-        const agilityMult = 1.0 + (1.0 - speedRatio) * tuning.Agility.minSpeedAgilityMultiplier.value;
+        const agilityMult = (1.0 + (1.0 - speedRatio) * tuning.Agility.minSpeedAgilityMultiplier.value) * this.stats.agility;
 
         // 3. Input Smoothing (The "Weight" Factor)
         // We damp the INPUT itself before applying it to rotation, simulating control surface delay/inertia
@@ -151,7 +159,7 @@ export class AirplaneSim implements ISimObject {
 
         // 4. Turning Logic (Yaw)
         // Target Rate = Input * MaxTurnSpeed * Agility
-        const targetYawRate = -this._inputYaw * tuning.Turning.turnSpeed.value * agilityMult;
+        const targetYawRate = -this._inputYaw * tuning.Turning.turnSpeed.value * agilityMult * this.stats.turnSpeed;
 
         // Accumulate Yaw ('Momentum' feel). 
         // We damp the rate itself slightly for "slide" feel:

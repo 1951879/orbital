@@ -30,7 +30,6 @@ export class MainMenuModeLogic implements GameMode {
 
     init() {
         console.log('[MainMenuMode] Init');
-        useStore.getState().setIsPaused(true); // Keep physics paused
         // Reset Mission state if returning from game
         useStore.getState().setMission('main_menu');
 

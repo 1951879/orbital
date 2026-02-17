@@ -5,7 +5,7 @@ import { SessionState } from '../../../../../engine/session/SessionState';
 import { ReadyToggle } from '../components/ReadyToggle';
 import { GamepadButton } from '@/src/app/core/ui/GamepadIcons';
 import { useSlotInput } from '../../hooks/useSlotInput';
-import { useSlotHints, useHostHints } from '../../hooks/useInputHints';
+import { useSlotHints, useHostHints } from '../../../../core/hooks/useInputHints';
 
 interface RosterPanelProps {
     focusedItem: number;
@@ -147,7 +147,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ slotIdx, pilot, isFocused, isHo
     return (
         <div
             ref={cardRef}
-            className={`relative flex items-stretch rounded-lg border transition-all overflow-hidden ${isFocused
+            className={`relative flex items-stretch rounded-lg border transition-all ${isOpen ? 'z-50 overflow-visible' : 'overflow-hidden'} ${isFocused
                 ? 'border-blue-500/70 bg-blue-600/10 shadow-[0_0_12px_rgba(59,130,246,0.15)]'
                 : isReady
                     ? 'bg-green-900/20 border-green-500/30'
@@ -275,6 +275,24 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ slotIdx, pilot, isFocused, isHo
                     </svg>
                 )}
             </button>
+
+            {/* Tray Hints (Gamepad only, when open) */}
+            {isOpen && hostHints.showGamepad && (
+                <div className="absolute top-full right-0 mt-2 flex items-center justify-end gap-3 pointer-events-none z-50 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5 opacity-80 drop-shadow-md">
+                        <div className="flex gap-0.5">
+                            <GamepadButton type={hostHints.gamepadType} button="DPadLeft" className="w-3.5 h-3.5" />
+                            <GamepadButton type={hostHints.gamepadType} button="DPadRight" className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-white">Select Action</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 opacity-80 drop-shadow-md">
+                        <GamepadButton type={hostHints.gamepadType} button="A" className="w-3.5 h-3.5" />
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-white">Confirm</span>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };
@@ -283,10 +301,18 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ slotIdx, pilot, isFocused, isHo
 
 export const RosterPanel: React.FC<RosterPanelProps> = ({ focusedItem, showFocus, isHost }) => {
     const localParty = useStore(state => state.localParty);
+    const openRosterMenu = useMainMenuStore(state => state.openRosterMenu);
+
+    const hostHints = useHostHints();
 
     return (
-        <div className="flex flex-col h-full">
-            <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto p-3">
+        <div className="flex flex-col h-full relative">
+            {/* Local Dimmer for inactive cards when menu is open */}
+            {openRosterMenu !== null && hostHints.showGamepad && (
+                <div className="absolute inset-0 bg-black/60 z-40 pointer-events-none transition-opacity duration-200" />
+            )}
+
+            <div className={`flex flex-col gap-1.5 flex-1 p-3 ${openRosterMenu !== null ? 'overflow-visible' : 'overflow-y-auto'}`}>
                 {localParty.map((pilot, index) => {
                     const slotIdx = pilot.id;
                     const isFocused = showFocus && focusedItem === index;

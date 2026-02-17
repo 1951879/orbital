@@ -7,7 +7,7 @@ import { AirplaneGeometry } from '@/src/app/core/entities/Airplane/models/Airpla
 import { PLANES } from '@/src/app/components/ui/tabs/data';
 import { useSlotInput } from '../../hooks/useSlotInput';
 import { GamepadButton } from '@/src/app/core/ui/GamepadIcons';
-import { useSlotHints } from '../../hooks/useInputHints';
+import { useSlotHints } from '../../../../core/hooks/useInputHints';
 import { ReadyToggle } from './ReadyToggle';
 
 // --- CONTROLS COMPONENT ---

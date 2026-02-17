@@ -3,101 +3,8 @@ import React, { useEffect, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useStore } from '../app/store/useStore';
 import { AirplaneType } from '../types';
-
-// ==================================================================================
-// CRITICAL: AUDIO CONFIGURATION LOCKED
-// ==================================================================================
-
-interface AudioConfig {
-  engineBaseFreq: number;
-  engineType: OscillatorType;
-  engineMix: number;
-  whineBaseFreq: number;
-  whineType: OscillatorType;
-  whineModulation: number;
-  whineMix: number;
-  rumbleMix: number;
-  rumbleFilterFreq: number;
-  windMix: number;
-  windTone: number;
-  maneuverNoiseOffset: number;
-  volMult: number;
-}
-
-const AIRPLANE_AUDIO_CONFIG: Record<AirplaneType, AudioConfig> = {
-  interceptor: {
-    engineBaseFreq: 110, engineType: 'sawtooth', engineMix: 0.18,
-    whineBaseFreq: 800, whineType: 'sine', whineModulation: 800, whineMix: 0.04,
-    rumbleMix: 0.7, rumbleFilterFreq: 350,
-    windMix: 0.6, windTone: 200, maneuverNoiseOffset: 2.0, volMult: 0.3
-  },
-  raptor: {
-    engineBaseFreq: 75, engineType: 'sawtooth', engineMix: 0.25,
-    whineBaseFreq: 1000, whineType: 'sine', whineModulation: 600, whineMix: 0.02,
-    rumbleMix: 0.8, rumbleFilterFreq: 150,
-    windMix: 0.45, windTone: 400, maneuverNoiseOffset: 1.5, volMult: 0.25
-  },
-  bomber: {
-    engineBaseFreq: 50, engineType: 'square', engineMix: 0.35,
-    whineBaseFreq: 300, whineType: 'sine', whineModulation: 100, whineMix: 0.01,
-    rumbleMix: 1.4, rumbleFilterFreq: 400,
-    windMix: 0.8, windTone: 50, maneuverNoiseOffset: 3.0, volMult: 0.35
-  },
-  scout: {
-    engineBaseFreq: 180, engineType: 'triangle', engineMix: 0.1,
-    whineBaseFreq: 500, whineType: 'sine', whineModulation: 1000, whineMix: 0.06,
-    rumbleMix: 0.2, rumbleFilterFreq: 800,
-    windMix: 0.5, windTone: 800, maneuverNoiseOffset: 1.5, volMult: 0.2
-  },
-  viper: {
-    engineBaseFreq: 140, engineType: 'sawtooth', engineMix: 0.25,
-    whineBaseFreq: 1200, whineType: 'triangle', whineModulation: 1500, whineMix: 0.08,
-    rumbleMix: 0.6, rumbleFilterFreq: 400,
-    windMix: 0.5, windTone: 600, maneuverNoiseOffset: 2.5, volMult: 0.32
-  },
-  manta: {
-    engineBaseFreq: 40, engineType: 'sine', engineMix: 0.6,
-    whineBaseFreq: 200, whineType: 'square', whineModulation: 50, whineMix: 0.03,
-    rumbleMix: 0.3, rumbleFilterFreq: 100,
-    windMix: 0.3, windTone: 100, maneuverNoiseOffset: 1.0, volMult: 0.28
-  },
-  corsair: {
-    engineBaseFreq: 90, engineType: 'square', engineMix: 0.4,
-    whineBaseFreq: 400, whineType: 'sawtooth', whineModulation: 400, whineMix: 0.05,
-    rumbleMix: 1.0, rumbleFilterFreq: 300,
-    windMix: 0.7, windTone: 300, maneuverNoiseOffset: 2.0, volMult: 0.3
-  },
-  eagle: {
-    engineBaseFreq: 55, engineType: 'triangle', engineMix: 0.4,
-    whineBaseFreq: 250, whineType: 'sine', whineModulation: 200, whineMix: 0.02,
-    rumbleMix: 1.6, rumbleFilterFreq: 200,
-    windMix: 1.0, windTone: 50, maneuverNoiseOffset: 3.5, volMult: 0.4
-  },
-  falcon: {
-    engineBaseFreq: 130, engineType: 'sawtooth', engineMix: 0.2,
-    whineBaseFreq: 1500, whineType: 'sine', whineModulation: 1000, whineMix: 0.06,
-    rumbleMix: 0.5, rumbleFilterFreq: 400,
-    windMix: 0.6, windTone: 800, maneuverNoiseOffset: 2.2, volMult: 0.3
-  },
-  tempest: {
-    engineBaseFreq: 60, engineType: 'square', engineMix: 0.3,
-    whineBaseFreq: 400, whineType: 'sawtooth', whineModulation: 200, whineMix: 0.03,
-    rumbleMix: 1.2, rumbleFilterFreq: 250,
-    windMix: 0.8, windTone: 200, maneuverNoiseOffset: 2.8, volMult: 0.35
-  },
-  phantom: {
-    engineBaseFreq: 40, engineType: 'sine', engineMix: 0.15,
-    whineBaseFreq: 2000, whineType: 'sine', whineModulation: 100, whineMix: 0.01,
-    rumbleMix: 0.4, rumbleFilterFreq: 100,
-    windMix: 0.9, windTone: 100, maneuverNoiseOffset: 1.0, volMult: 0.25
-  },
-  starling: {
-    engineBaseFreq: 200, engineType: 'triangle', engineMix: 0.4,
-    whineBaseFreq: 600, whineType: 'square', whineModulation: 1200, whineMix: 0.08,
-    rumbleMix: 0.4, rumbleFilterFreq: 600,
-    windMix: 0.4, windTone: 1000, maneuverNoiseOffset: 1.8, volMult: 0.28
-  }
-};
+import { AudioConfig } from '../app/core/entities/Airplane/models/AirplaneDef';
+import { AIRPLANE_AUDIO_CONFIG } from '../app/core/entities/Airplane/registry';
 
 const AUDIO_ENABLED = true;
 
@@ -118,9 +25,10 @@ export const useAirplaneSound = (
   currentSpeedRef: React.MutableRefObject<number>,
   inputRef: React.MutableRefObject<{ x: number; y: number }>,
   maxSpeed: number,
-  pan: number = 0 // -1.0 (Left) to 1.0 (Right)
+  pan: number = 0, // -1.0 (Left) to 1.0 (Right)
+  paused: boolean = false
 ) => {
-  const isPaused = useStore((state) => state.isPaused);
+  // const isPaused = useStore((state) => state.isPaused); // REMOVED GLOBAL DEPENDENCY
 
   // Audio Context Ref (Reference to Singleton)
   const ctxRef = useRef<AudioContext | null>(null);
@@ -267,11 +175,11 @@ export const useAirplaneSound = (
     if (!ctx || !masterGain.current) return;
 
     // Resume context if suspended
-    if (!isPaused && ctx.state === 'suspended') {
+    if (!paused && ctx.state === 'suspended') {
       ctx.resume();
     }
 
-    if (isPaused) {
+    if (paused) {
       masterGain.current.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
       return;
     }

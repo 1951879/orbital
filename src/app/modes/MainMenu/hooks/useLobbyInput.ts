@@ -176,7 +176,7 @@ export const useLobbyInput = (panels: LobbyPanelDescriptor[]) => {
                     break;
                 }
                 case 'BACK': {
-                    setScreen('operations');
+                    // Back does nothing for lobby navigation (handled by ABORT action in MainMenuContainer)
                     break;
                 }
             }

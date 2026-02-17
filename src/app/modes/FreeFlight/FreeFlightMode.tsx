@@ -8,10 +8,11 @@ import { BlueprintSphere } from '../../core/env/BlueprintSphere';
 import { AirplaneView } from '../../core/entities/Airplane/AirplaneView';
 import { AirplaneSim } from '../../core/entities/Airplane/AirplaneSim';
 import { SunLight } from '../../core/env/SunLight';
-
 import { useStore } from '../../store/useStore';
+import { GameHUD } from '../../core/ui/components/hud/GameHUD'; // Import HUD
+
 import { PhysicsWorld } from '../../../engine/sim/PhysicsWorld';
-import { MenuOverlay } from '../../components/ui/MenuOverlay';
+import { FREE_FLIGHT_GAMEPAD, FREE_FLIGHT_KB1, FREE_FLIGHT_KB2 } from './input/FreeFlightInput';
 
 // --- SPAWN LOGIC ---
 const getSpawnPoint = (index: number) => {
@@ -34,21 +35,28 @@ const FreeFlightViewport: React.FC<{
     cameraRef: any,
     cameras?: Record<string, React.FC<any>>
 }> = ({ mode, player, cameraRef, cameras }) => {
-    // We need to look up the sim for this player to attach the camera
-    // Tricky: React Render vs Sim Creation sync.
-    // If Sim doesn't exist yet, we can't attach camera target.
+    // 1. Always call Hooks at top level
+    const isPaused = useFreeFlightStore((state) => state.isPaused);
 
-    // Subscribe to mode changes to retry if sim missing
     const sim = useSyncExternalStore(
         (cb) => mode.subscribe(cb),
         () => mode.getSim(player.id)
     );
 
+    // 2. Conditional Rendering
+
+    // ORBIT CAMERA (Pause Mode)
+    if (isPaused) {
+        const OrbitCam = cameras ? cameras['orbit'] : null;
+        if (OrbitCam) return <OrbitCam cameraRef={cameraRef} />;
+    }
+
+    // CHASE CAMERA (Gameplay Mode)
     if (!sim) return null; // Wait for sim
 
     // Use Injected Camera
     const CameraComponent = cameras ? cameras['chase'] : null;
-    if (!CameraComponent) return null; // Or fallback?
+    if (!CameraComponent) return null;
 
     return <CameraComponent sim={sim} cameraRef={cameraRef} />;
 };
@@ -60,6 +68,8 @@ const FreeFlightScene: React.FC<{ mode: FreeFlightModeLogic }> = ({ mode }) => {
         () => mode.getSims()
     );
 
+    const isPaused = useFreeFlightStore(state => state.isPaused); // Move Hook to Top Level
+
     return (
         <>
             <SunLight />
@@ -70,6 +80,7 @@ const FreeFlightScene: React.FC<{ mode: FreeFlightModeLogic }> = ({ mode }) => {
                     <AirplaneView
                         sim={sim}
                         playerId={sim.playerId}
+                        paused={isPaused} // Use Variable
                     />
                     <TelemetryBridge sim={sim} playerId={sim.playerId} />
                 </React.Fragment>
@@ -78,23 +89,34 @@ const FreeFlightScene: React.FC<{ mode: FreeFlightModeLogic }> = ({ mode }) => {
     );
 };
 
+import { FreeFlightPauseMenu } from './ui/FreeFlightPauseMenu';
+import { PauseButton } from '../../components/ui/PauseButton';
+
 const FreeFlightUI: React.FC = () => {
-    const isPaused = useStore((state) => state.isPaused);
-    /* 
-       If Paused, show MenuOverlay. 
-       Note: MenuOverlay handles "Resume" vs "Launch" logic via its internal check of 'mission'.
-    */
-    if (isPaused) {
-        // We pass a dummy helper or rely on the internal store logic.
-        // MenuOverlay uses onTogglePause prop.
-        return <MenuOverlay onTogglePause={() => useStore.getState().setIsPaused(false)} />;
-    }
+    const isPaused = useFreeFlightStore((state) => state.isPaused);
+    const setPaused = useFreeFlightStore((state) => state.setPaused);
 
     return (
-        <div className="absolute top-4 left-4 text-white font-mono pointer-events-none">
-            <h1 className="text-xl font-bold">FREE FLIGHT</h1>
-            <div className="text-xs opacity-50">MODE: ACTIVE</div>
-        </div>
+        <>
+            {!isPaused && (
+                <PauseButton
+                    onClick={() => setPaused(true)}
+                    className="absolute top-6 right-6"
+                />
+            )}
+            {isPaused && <FreeFlightPauseMenu />}
+
+            {/* Render HUDs for all local players, respecting PAUSE state */}
+            {useStore(state => state.localParty).map((pilot, index) => (
+                <div key={pilot.id} className="absolute inset-0 pointer-events-none">
+                    {/* Simplified positioning for single player for now, need robust grid for splitscreen later */}
+                    {/* For now, just center-bottom like before */}
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
+                        <GameHUD pilotId={pilot.id} paused={isPaused} />
+                    </div>
+                </div>
+            ))}
+        </>
     );
 };
 
@@ -108,6 +130,10 @@ export class FreeFlightModeLogic implements GameMode {
     UIComponent: React.FC = () => <FreeFlightUI />;
     ViewportComponent: React.FC<{ player: any, cameraRef: any }> = (props) => <FreeFlightViewport mode={this} {...props} />;
 
+    getLayoutOverride() {
+        return useFreeFlightStore.getState().isPaused ? 'single' : 'default';
+    }
+
     // State
     private sims = new Map<number, AirplaneSim>();
     private cachedSims: AirplaneSim[] = [];
@@ -117,15 +143,56 @@ export class FreeFlightModeLogic implements GameMode {
         console.log('[FreeFlightMode] Init');
         this.sims.clear();
         this.cachedSims = [];
+
+        // Register Input Profiles
+        SessionState.registerDefaultProfile('gamepad', 'FLIGHT', FREE_FLIGHT_GAMEPAD);
+        // Register Keyboard Profiles
+        SessionState.registerDefaultProfile('keyboard_wasd', 'FLIGHT', FREE_FLIGHT_KB1);
+        SessionState.registerDefaultProfile('keyboard_arrows', 'FLIGHT', FREE_FLIGHT_KB2);
+        // Also register general 'keyboard' just in case
+        SessionState.registerDefaultProfile('keyboard', 'FLIGHT', FREE_FLIGHT_KB1);
+
+        // Apply to existing players (since they joined before this profile was registered)
+        SessionState.players.forEach(p => {
+            if (p.deviceId.startsWith('gamepad')) {
+                p.input.loadProfile('FLIGHT', FREE_FLIGHT_GAMEPAD);
+            } else if (p.deviceId === 'keyboard_wasd' || p.deviceId === 'kb1') {
+                p.input.loadProfile('FLIGHT', FREE_FLIGHT_KB1);
+            } else if (p.deviceId === 'keyboard_arrows' || p.deviceId === 'kb2') {
+                p.input.loadProfile('FLIGHT', FREE_FLIGHT_KB2);
+            } else {
+                // Fallback
+                p.input.loadProfile('FLIGHT', FREE_FLIGHT_KB1);
+            }
+        });
+
+        // Force Context to FLIGHT for all players
+        SessionState.setContextForAll('FLIGHT');
+
+        // Listen for PAUSE Input
+        const onInput = (playerId: number, action: string) => {
+            if (action === 'PAUSE') {
+                const current = useFreeFlightStore.getState().isPaused;
+                useFreeFlightStore.getState().setPaused(!current);
+            }
+        };
+        this.unsubscribeInput = SessionState.onInput(onInput);
+
         this.emitChange();
     }
+
+    private unsubscribeInput?: () => void;
 
     dispose() {
         console.log('[FreeFlightMode] Dispose');
         this.sims.clear();
         this.cachedSims = [];
+        if (this.unsubscribeInput) this.unsubscribeInput();
         this.emitChange();
         this.listeners.clear();
+
+        // Ensure paused is false when leaving? Or let next mode handle it.
+        useFreeFlightStore.getState().setPaused(false);
     }
 
     update(dt: number) {
@@ -136,9 +203,12 @@ export class FreeFlightModeLogic implements GameMode {
         // Add New
         players.forEach(p => {
             if (!this.sims.has(p.id)) {
-                console.log('Spawning Sim for Player', p.id);
+                // Read the pilot's selected airplane from the store
+                const pilot = useStore.getState().localParty.find(lp => lp.id === p.id);
+                const selectedType = pilot?.airplane || 'interceptor';
+                console.log('Spawning Sim for Player', p.id, 'with type', selectedType);
                 const spawn = getSpawnPoint(p.id);
-                const sim = new AirplaneSim(p.id, spawn, 'interceptor');
+                const sim = new AirplaneSim(p.id, spawn, selectedType);
                 this.sims.set(p.id, sim);
                 changed = true;
             }
@@ -158,8 +228,8 @@ export class FreeFlightModeLogic implements GameMode {
             this.emitChange();
         }
 
-        // Check Pause State
-        const isPaused = useStore.getState().isPaused;
+        // Check Pause State (LOCAL)
+        const isPaused = useFreeFlightStore.getState().isPaused;
 
         if (!isPaused) {
             // 2. Update Physics

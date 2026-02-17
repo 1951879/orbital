@@ -1,5 +1,5 @@
 import { useStore } from '@/src/app/store/useStore';
-import { useGamepadDetector, GamepadType } from '@/src/app/core/ui/useGamepadDetector';
+import { useGamepadDetector, GamepadType } from '@/src/app/core/hooks/useGamepadDetector';
 import { LocalPilot } from '@/src/types';
 
 /**

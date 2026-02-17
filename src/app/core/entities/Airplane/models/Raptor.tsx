@@ -1,15 +1,13 @@
 
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
-// Fix: Import ThreeElements to provide JSX intrinsic types
+import { Vector3 } from 'three';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../../effects/JetExhaust';
-import { AIRPLANE_SCALES } from '../AirplaneConfig';
+import { AirplaneDef, AirplaneModelProps } from './AirplaneDef';
 
-export const Raptor: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
+const Raptor: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleRef, scale }) => {
     const effectiveThrottle = throttle ?? 0.5;
-    // ... (lines omitted)
-
 
     const colors = {
         main: '#15803d',
@@ -50,7 +48,7 @@ export const Raptor: React.FC<{ playerId?: number, throttle?: number, throttleRe
     }, []);
 
     return (
-        <group scale={[AIRPLANE_SCALES.raptor, AIRPLANE_SCALES.raptor, AIRPLANE_SCALES.raptor]}>
+        <group scale={[scale, scale, scale]}>
             <mesh rotation={[Math.PI / 2, 0, 0]} scale={[1.4, 0.5, 0.6]}>
                 <cylinderGeometry args={[0.35, 0.5, 2.6, 8]} />
                 <meshStandardMaterial color={colors.main} roughness={0.3} metalness={0.6} />
@@ -108,3 +106,32 @@ export const Raptor: React.FC<{ playerId?: number, throttle?: number, throttleRe
         </group>
     );
 };
+
+export default {
+    type: 'raptor',
+    name: 'Stealth Raptor',
+    description: 'Air superiority fighter.',
+    scale: 0.37,
+    collisionPoints: [
+        new Vector3(0, -0.4, 2.0),
+        new Vector3(0, 0.4, 2.0),
+        new Vector3(0, -0.4, -1.5),
+        new Vector3(0.6, 0.8, -1.5),
+        new Vector3(-0.6, 0.8, -1.5),
+        new Vector3(3.0, 0, -0.5),
+        new Vector3(-3.0, 0, -0.5),
+    ],
+    audio: {
+        engineBaseFreq: 75, engineType: 'sawtooth', engineMix: 0.25,
+        whineBaseFreq: 1000, whineType: 'sine', whineModulation: 600, whineMix: 0.02,
+        rumbleMix: 0.8, rumbleFilterFreq: 150,
+        windMix: 0.45, windTone: 400, maneuverNoiseOffset: 1.5, volMult: 0.25,
+    },
+    stats: {
+        turnSpeed: 0.9,
+        maxSpeed: 0.9,
+        acceleration: 0.8,
+        agility: 0.85
+    },
+    Component: Raptor,
+} satisfies AirplaneDef;

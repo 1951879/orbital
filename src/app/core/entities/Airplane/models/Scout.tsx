@@ -1,15 +1,13 @@
 
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
-// Fix: Import ThreeElements to provide JSX intrinsic types
+import { Vector3 } from 'three';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../../effects/JetExhaust';
-import { AIRPLANE_SCALES } from '../AirplaneConfig';
+import { AirplaneDef, AirplaneModelProps } from './AirplaneDef';
 
-export const Scout: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
+const Scout: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleRef, scale }) => {
    const effectiveThrottle = throttle ?? 0.5;
-   // ...
-
 
    const colors = {
       main: '#e2e8f0',
@@ -41,7 +39,7 @@ export const Scout: React.FC<{ playerId?: number, throttle?: number, throttleRef
    }, []);
 
    return (
-      <group scale={[AIRPLANE_SCALES.scout, AIRPLANE_SCALES.scout, AIRPLANE_SCALES.scout]}>
+      <group scale={[scale, scale, scale]}>
          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.5]}>
             <coneGeometry args={[0.3, 3.2, 16]} />
             <meshStandardMaterial color={colors.main} roughness={0.1} metalness={0.9} />
@@ -100,3 +98,25 @@ export const Scout: React.FC<{ playerId?: number, throttle?: number, throttleRef
       </group>
    );
 };
+
+export default {
+   type: 'scout',
+   name: 'Adv. Scout',
+   description: 'High speed reconnaissance.',
+   scale: 0.3,
+   collisionPoints: [
+      new Vector3(0, -0.3, 1.5),
+      new Vector3(0, 0.3, 1.5),
+      new Vector3(0, -0.3, -1.2),
+      new Vector3(0, 0.6, -1.2),
+      new Vector3(2.0, 0, -0.5),
+      new Vector3(-2.0, 0, -0.5),
+   ],
+   audio: {
+      engineBaseFreq: 180, engineType: 'triangle', engineMix: 0.1,
+      whineBaseFreq: 500, whineType: 'sine', whineModulation: 1000, whineMix: 0.06,
+      rumbleMix: 0.2, rumbleFilterFreq: 800,
+      windMix: 0.5, windTone: 800, maneuverNoiseOffset: 1.5, volMult: 0.2,
+   },
+   Component: Scout,
+} satisfies AirplaneDef;

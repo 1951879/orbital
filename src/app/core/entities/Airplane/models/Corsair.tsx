@@ -1,12 +1,12 @@
 
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
-// Fix: Import ThreeElements to provide JSX intrinsic types
+import { Vector3 } from 'three';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../../effects/JetExhaust';
-import { AIRPLANE_SCALES } from '../AirplaneConfig';
+import { AirplaneDef, AirplaneModelProps } from './AirplaneDef';
 
-export const Corsair: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
+const Corsair: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleRef, scale }) => {
     const effectiveThrottle = throttle ?? 0.5;
 
     const colors = { main: '#ca8a04', highlight: '#1e3a8a', engine: '#475569', canopy: '#38bdf8' };
@@ -21,7 +21,7 @@ export const Corsair: React.FC<{ playerId?: number, throttle?: number, throttleR
     }, []);
 
     return (
-        <group scale={[AIRPLANE_SCALES.corsair, AIRPLANE_SCALES.corsair, AIRPLANE_SCALES.corsair]}>
+        <group scale={[scale, scale, scale]}>
             <mesh rotation={[Math.PI / 2, 0, 0]}>
                 <cylinderGeometry args={[0.4, 0.3, 3.0, 12]} />
                 <meshStandardMaterial color={colors.highlight} roughness={0.4} metalness={0.5} />
@@ -66,3 +66,25 @@ export const Corsair: React.FC<{ playerId?: number, throttle?: number, throttleR
         </group>
     );
 };
+
+export default {
+    type: 'corsair',
+    name: 'Corsair II',
+    description: 'Bent-wing naval striker.',
+    scale: 0.35,
+    collisionPoints: [
+        new Vector3(0, -0.5, 1.5),
+        new Vector3(0, 0.5, 1.5),
+        new Vector3(0, -0.5, -1.5),
+        new Vector3(0, 0.8, -1.5),
+        new Vector3(2.2, 0, -0.2),
+        new Vector3(-2.2, 0, -0.2),
+    ],
+    audio: {
+        engineBaseFreq: 90, engineType: 'square', engineMix: 0.4,
+        whineBaseFreq: 400, whineType: 'sawtooth', whineModulation: 400, whineMix: 0.05,
+        rumbleMix: 1.0, rumbleFilterFreq: 300,
+        windMix: 0.7, windTone: 300, maneuverNoiseOffset: 2.0, volMult: 0.3,
+    },
+    Component: Corsair,
+} satisfies AirplaneDef;

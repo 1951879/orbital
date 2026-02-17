@@ -25,6 +25,9 @@ interface FreeFlightState {
 
     addExplosion: (pos: Vector3, scale: number) => void;
     removeExplosion: (id: number) => void;
+
+    isPaused: boolean;
+    setPaused: (paused: boolean) => void;
 }
 
 let nextId = 0;
@@ -52,5 +55,8 @@ export const useFreeFlightStore = create<FreeFlightState>((set, get) => ({
 
     removeExplosion: (id) => set((state) => ({
         explosions: state.explosions.filter(e => e.id !== id)
-    }))
+    })),
+
+    isPaused: false,
+    setPaused: (paused) => set({ isPaused: paused })
 }));

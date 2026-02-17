@@ -1,17 +1,17 @@
 
 import React from 'react';
-// Fix: Import ThreeElements to provide JSX intrinsic types
+import { Vector3 } from 'three';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../../effects/JetExhaust';
-import { AIRPLANE_SCALES } from '../AirplaneConfig';
+import { AirplaneDef, AirplaneModelProps } from './AirplaneDef';
 
-export const Eagle: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
+const Eagle: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleRef, scale }) => {
     const effectiveThrottle = throttle ?? 0.5;
 
     const colors = { main: '#fef08a', highlight: '#a16207', engine: '#451a03', canopy: '#0f172a' };
 
     return (
-        <group scale={[AIRPLANE_SCALES.eagle, AIRPLANE_SCALES.eagle, AIRPLANE_SCALES.eagle]}>
+        <group scale={[scale, scale, scale]}>
             {/* Main Hull */}
             <mesh>
                 <boxGeometry args={[0.8, 0.6, 3.0]} />
@@ -62,3 +62,25 @@ export const Eagle: React.FC<{ playerId?: number, throttle?: number, throttleRef
         </group>
     );
 };
+
+export default {
+    type: 'eagle',
+    name: 'Golden Eagle',
+    description: 'Heavy orbital cruiser.',
+    scale: 0.38,
+    collisionPoints: [
+        new Vector3(0, -0.5, 1.8),
+        new Vector3(0, 0.5, 1.8),
+        new Vector3(0, -0.5, -1.8),
+        new Vector3(0, 0.9, -1.8),
+        new Vector3(2.5, 0, -0.5),
+        new Vector3(-2.5, 0, -0.5),
+    ],
+    audio: {
+        engineBaseFreq: 55, engineType: 'triangle', engineMix: 0.4,
+        whineBaseFreq: 250, whineType: 'sine', whineModulation: 200, whineMix: 0.02,
+        rumbleMix: 1.6, rumbleFilterFreq: 200,
+        windMix: 1.0, windTone: 50, maneuverNoiseOffset: 3.5, volMult: 0.4,
+    },
+    Component: Eagle,
+} satisfies AirplaneDef;

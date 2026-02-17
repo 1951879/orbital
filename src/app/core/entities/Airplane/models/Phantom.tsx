@@ -1,11 +1,12 @@
 
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
+import { Vector3 } from 'three';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../../effects/JetExhaust';
-import { AIRPLANE_SCALES } from '../AirplaneConfig';
+import { AirplaneDef, AirplaneModelProps } from './AirplaneDef';
 
-export const Phantom: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
+const Phantom: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleRef, scale }) => {
     const effectiveThrottle = throttle ?? 0.5;
 
     const colors = { main: '#27272a', highlight: '#7e22ce', engine: '#18181b', canopy: '#a855f7' };
@@ -21,7 +22,7 @@ export const Phantom: React.FC<{ playerId?: number, throttle?: number, throttleR
     }, []);
 
     return (
-        <group scale={[AIRPLANE_SCALES.phantom, AIRPLANE_SCALES.phantom, AIRPLANE_SCALES.phantom]}>
+        <group scale={[scale, scale, scale]}>
             {/* Main Body */}
             <mesh rotation={[-Math.PI / 2, 0, 0]}>
                 <extrudeGeometry args={[deltaShape, { depth: 0.3, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05 }]} />
@@ -60,3 +61,25 @@ export const Phantom: React.FC<{ playerId?: number, throttle?: number, throttleR
         </group>
     );
 };
+
+export default {
+    type: 'phantom',
+    name: 'Phantom Ray',
+    description: 'Stealth drone prototype.',
+    scale: 0.4,
+    collisionPoints: [
+        new Vector3(0, -0.4, 1.8),
+        new Vector3(0, 0.4, 1.8),
+        new Vector3(0, -0.4, -1.6),
+        new Vector3(0, 0.8, -1.6),
+        new Vector3(2.2, 0, -0.5),
+        new Vector3(-2.2, 0, -0.5),
+    ],
+    audio: {
+        engineBaseFreq: 40, engineType: 'sine', engineMix: 0.15,
+        whineBaseFreq: 2000, whineType: 'sine', whineModulation: 100, whineMix: 0.01,
+        rumbleMix: 0.4, rumbleFilterFreq: 100,
+        windMix: 0.9, windTone: 100, maneuverNoiseOffset: 1.0, volMult: 0.25,
+    },
+    Component: Phantom,
+} satisfies AirplaneDef;

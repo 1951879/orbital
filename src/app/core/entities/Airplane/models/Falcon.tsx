@@ -1,11 +1,12 @@
 
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
+import { Vector3 } from 'three';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../../effects/JetExhaust';
-import { AIRPLANE_SCALES } from '../AirplaneConfig';
+import { AirplaneDef, AirplaneModelProps } from './AirplaneDef';
 
-export const Falcon: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
+const Falcon: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleRef, scale }) => {
     const effectiveThrottle = throttle ?? 0.5;
 
     const colors = { main: '#f8fafc', highlight: '#f97316', engine: '#334155', canopy: '#38bdf8' };
@@ -22,7 +23,7 @@ export const Falcon: React.FC<{ playerId?: number, throttle?: number, throttleRe
     }, []);
 
     return (
-        <group scale={[AIRPLANE_SCALES.falcon, AIRPLANE_SCALES.falcon, AIRPLANE_SCALES.falcon]}>
+        <group scale={[scale, scale, scale]}>
             {/* Fuselage */}
             <mesh rotation={[Math.PI / 2, 0, 0]}>
                 <cylinderGeometry args={[0.15, 0.3, 3.5, 8]} />
@@ -72,3 +73,25 @@ export const Falcon: React.FC<{ playerId?: number, throttle?: number, throttleRe
         </group>
     );
 };
+
+export default {
+    type: 'falcon',
+    name: 'Falcon X',
+    description: 'Hyper-agile interceptor.',
+    scale: 0.35,
+    collisionPoints: [
+        new Vector3(0, -0.4, 1.6),
+        new Vector3(0, 0.4, 1.6),
+        new Vector3(0, -0.4, -1.6),
+        new Vector3(0, 0.8, -1.6),
+        new Vector3(2.0, 0, -0.4),
+        new Vector3(-2.0, 0, -0.4),
+    ],
+    audio: {
+        engineBaseFreq: 130, engineType: 'sawtooth', engineMix: 0.2,
+        whineBaseFreq: 1500, whineType: 'sine', whineModulation: 1000, whineMix: 0.06,
+        rumbleMix: 0.5, rumbleFilterFreq: 400,
+        windMix: 0.6, windTone: 800, maneuverNoiseOffset: 2.2, volMult: 0.3,
+    },
+    Component: Falcon,
+} satisfies AirplaneDef;

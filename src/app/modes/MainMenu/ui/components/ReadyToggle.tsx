@@ -1,6 +1,6 @@
 import React from 'react';
 import { GamepadButton } from '@/src/app/core/ui/GamepadIcons';
-import { useSlotHints } from '../../hooks/useInputHints';
+import { useSlotHints } from '../../../../core/hooks/useInputHints';
 
 interface ReadyToggleProps {
     isReady: boolean;

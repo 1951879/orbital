@@ -1,22 +1,10 @@
 
 import React from 'react';
-import { AirplaneType } from '../../../../../types';
-import { Interceptor } from './Interceptor';
-import { Raptor } from './Raptor';
-import { Bomber } from './Bomber';
-import { Scout } from './Scout';
-import { Viper } from './Viper';
-import { Manta } from './Manta';
-import { Corsair } from './Corsair';
-import { Eagle } from './Eagle';
-import { Falcon } from './Falcon';
-import { Tempest } from './Tempest';
-import { Phantom } from './Phantom';
-import { Starling } from './Starling';
+import { AIRPLANE_REGISTRY } from '../registry';
 import { useStore } from '../../../../store/useStore';
 
 interface AirplaneGeometryProps {
-  type: AirplaneType;
+  type: string;
   playerId?: number;
   throttle?: number; // Optional override for remote players
   throttleRef?: React.MutableRefObject<number>; // Optional 60fps override
@@ -27,19 +15,8 @@ export const AirplaneGeometry: React.FC<AirplaneGeometryProps> = ({ type, player
   const pilotThrottle = useStore((state) => state.localParty[(playerId || 1) - 1]?.throttle ?? 0.5);
   const effectiveThrottle = throttle !== undefined ? throttle : pilotThrottle;
 
-  switch (type) {
-    case 'interceptor': return <Interceptor playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} />;
-    case 'raptor': return <Raptor playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} />;
-    case 'bomber': return <Bomber playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} />;
-    case 'scout': return <Scout playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} />;
-    case 'viper': return <Viper playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} />;
-    case 'manta': return <Manta playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} />;
-    case 'corsair': return <Corsair playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} />;
-    case 'eagle': return <Eagle playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} />;
-    case 'falcon': return <Falcon playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} />;
-    case 'tempest': return <Tempest playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} />;
-    case 'phantom': return <Phantom playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} />;
-    case 'starling': return <Starling playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} />;
-    default: return <Interceptor playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} />;
-  }
+  const def = AIRPLANE_REGISTRY[type] || AIRPLANE_REGISTRY['interceptor'];
+  const Component = def.Component;
+
+  return <Component playerId={playerId} throttle={effectiveThrottle} throttleRef={throttleRef} scale={def.scale} />;
 };

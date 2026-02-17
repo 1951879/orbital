@@ -1,12 +1,12 @@
 
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
-// Fix: Import ThreeElements to provide JSX intrinsic types
+import { Vector3 } from 'three';
 import { ThreeElements } from '@react-three/fiber';
 import { JetExhaust } from '../../effects/JetExhaust';
-import { AIRPLANE_SCALES } from '../AirplaneConfig';
+import { AirplaneDef, AirplaneModelProps } from './AirplaneDef';
 
-export const Interceptor: React.FC<{ playerId?: number, throttle?: number, throttleRef?: React.MutableRefObject<number> }> = ({ playerId = 1, throttle, throttleRef }) => {
+const Interceptor: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleRef, scale }) => {
   const effectiveThrottle = throttle ?? 0.5;
 
   const colors = { main: '#0ea5e9', highlight: '#dc2626', engine: '#0f172a', canopy: '#fbbf24' };
@@ -29,7 +29,7 @@ export const Interceptor: React.FC<{ playerId?: number, throttle?: number, throt
   }, []);
 
   return (
-    <group scale={[AIRPLANE_SCALES.interceptor, AIRPLANE_SCALES.interceptor, AIRPLANE_SCALES.interceptor]}>
+    <group scale={[scale, scale, scale]}>
       <mesh rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.25, 0.45, 2.2, 8]} />
         <meshStandardMaterial color={colors.main} roughness={0.2} metalness={0.7} />
@@ -67,3 +67,31 @@ export const Interceptor: React.FC<{ playerId?: number, throttle?: number, throt
     </group>
   );
 };
+
+export default {
+  type: 'interceptor',
+  name: 'Interceptor',
+  description: 'Balanced multi-role fighter.',
+  scale: 0.33,
+  collisionPoints: [
+    new Vector3(0, -0.5, 1.8),
+    new Vector3(0, 0.5, 1.8),
+    new Vector3(0, -0.5, -1.8),
+    new Vector3(0, 0.8, -1.8),
+    new Vector3(2.5, 0, -0.5),
+    new Vector3(-2.5, 0, -0.5),
+  ],
+  audio: {
+    engineBaseFreq: 110, engineType: 'sawtooth', engineMix: 0.18,
+    whineBaseFreq: 800, whineType: 'sine', whineModulation: 800, whineMix: 0.04,
+    rumbleMix: 0.7, rumbleFilterFreq: 350,
+    windMix: 0.6, windTone: 200, maneuverNoiseOffset: 2.0, volMult: 0.3,
+  },
+  stats: {
+    turnSpeed: 1.3,
+    maxSpeed: 1.25,
+    acceleration: 1.2,
+    agility: 1.3
+  },
+  Component: Interceptor,
+} satisfies AirplaneDef;

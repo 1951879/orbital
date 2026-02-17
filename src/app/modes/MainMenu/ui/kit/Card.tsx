@@ -17,7 +17,7 @@ export const Card: React.FC<CardProps> = ({
     variant = 'default',
     focused = false
 }) => {
-    const baseStyle = "border rounded-xl backdrop-blur-xl relative overflow-hidden transition-all duration-200";
+    const baseStyle = "border rounded-xl backdrop-blur-xl relative transition-all duration-200 overflow-hidden";
 
     const variants = {
         default: "bg-slate-900/60 border-white/10 shadow-2xl",

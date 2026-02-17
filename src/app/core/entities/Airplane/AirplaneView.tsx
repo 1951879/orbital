@@ -13,10 +13,11 @@ import { useStore } from '../../../store/useStore'; // Fixed path
  * Reads from Sim layer, renders visuals only.
  * Bridges Sim state to Legacy Audio Hooks.
  */
-export const AirplaneView: React.FC<{ sim: AirplaneSim; playerId: number; visible?: boolean }> = ({
+export const AirplaneView: React.FC<{ sim: AirplaneSim; playerId: number; visible?: boolean; paused?: boolean }> = ({
     sim,
     playerId,
-    visible = true
+    visible = true,
+    paused = false
 }) => {
     const groupRef = useRef<Group>(null);
     const meshRef = useRef<Group>(null);
@@ -52,7 +53,8 @@ export const AirplaneView: React.FC<{ sim: AirplaneSim; playerId: number; visibl
         speedRef,
         inputRef,
         AIRPLANE_CONFIG.speed,
-        0 // Pan (Default center for now, can implement stereo later)
+        0, // Pan
+        paused
     );
 
     useFrame(() => {

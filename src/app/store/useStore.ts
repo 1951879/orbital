@@ -203,8 +203,7 @@ export const useStore = create<AppState>((set, get) => ({
     isCameraTransitioning: false,
     setCameraTransitioning: (val) => set({ isCameraTransitioning: val }),
 
-    isPaused: true, // Start Paused (In Menu)
-    setIsPaused: (val) => set({ isPaused: val }),
+    // isPaused removed - handled per-mode now
 
     activeMenuTab: 'hangar',
     setActiveMenuTab: (tab) => set({ activeMenuTab: tab }),
@@ -242,7 +241,7 @@ export const useStore = create<AppState>((set, get) => ({
     // setSquadronAnchor: (anchor) => set({ squadronAnchor: anchor }),
 
     abortMission: () => set((state) => ({
-        mission: 'free',
-        isPaused: true // Keep paused so we return to menu lobby
+        mission: 'main_menu',
+        // isPaused handled by mode disposal
     }))
 }));
