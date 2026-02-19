@@ -61,6 +61,15 @@ const App: React.FC = () => {
         case 'DISCONNECTED':
           useStore.getState().setOnlineStatus('disconnected');
           break;
+        case 'GAME_DISCONNECTED':
+          console.log('[App] Game Disconnected - Clearing Room State');
+          useStore.getState().setRemotePlayers([]);
+          useStore.getState().setCurrentRoomId(null);
+          break;
+        case 'MISSION_STARTED':
+          console.log('[App] Mission started by Host');
+          useStore.getState().setMission('free');
+          break;
         case 'LOBBY_LIST':
           useStore.getState().setLobbies(event.lobbies);
           break;

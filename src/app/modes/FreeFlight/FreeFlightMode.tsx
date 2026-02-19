@@ -19,12 +19,18 @@ import { FREE_FLIGHT_GAMEPAD, FREE_FLIGHT_KB1, FREE_FLIGHT_KB2 } from './input/F
 
 // --- SPAWN LOGIC ---
 const getSpawnPoint = (index: number) => {
-    // Simple ring distribution
-    const angle = (index / 4) * Math.PI * 2;
-    const radius = 55; // Altitude
-    const x = Math.sin(angle) * radius;
-    const z = Math.cos(angle) * radius;
-    return new Vector3(x, 50, z); // 50 starts them high?
+    // Standardized Spawn Logic (Matches GameRoom.ts)
+    // Ring around equator (Y=0)
+    const angle = (index * Math.PI * 0.5); // 90 degrees separation per player
+    const state = useStore.getState();
+    const planetRadius = state.terrainParams ? state.terrainParams.planetRadius : 50;
+    const radius = planetRadius + 50; // Standard altitude
+
+    return new Vector3(
+        Math.sin(angle) * radius,
+        0,
+        Math.cos(angle) * radius
+    );
 };
 
 // --- REACT COMPONENTS ---
@@ -103,10 +109,18 @@ const FreeFlightScene: React.FC<{ mode: FreeFlightModeLogic }> = ({ mode }) => {
 
 import { FreeFlightPauseMenu } from './ui/FreeFlightPauseMenu';
 import { PauseButton } from '../../components/ui/PauseButton';
+import { LoadingScreen } from '../../core/ui/LoadingScreen';
 
 const FreeFlightUI: React.FC = () => {
     const isPaused = useFreeFlightStore((state) => state.isPaused);
     const setPaused = useFreeFlightStore((state) => state.setPaused);
+    const isLoading = useFreeFlightStore((state) => state.isLoading);
+
+    const localParty = useStore(state => state.localParty);
+
+    if (isLoading) {
+        return <LoadingScreen />;
+    }
 
     return (
         <>
@@ -119,7 +133,7 @@ const FreeFlightUI: React.FC = () => {
             {isPaused && <FreeFlightPauseMenu />}
 
             {/* Render HUDs for all local players, respecting PAUSE state */}
-            {useStore(state => state.localParty).map((pilot, index) => (
+            {localParty.map((pilot, index) => (
                 <div key={pilot.id} className="absolute inset-0 pointer-events-none">
                     {/* Simplified positioning for single player for now, need robust grid for splitscreen later */}
                     {/* For now, just center-bottom like before */}
@@ -151,11 +165,31 @@ export class FreeFlightModeLogic implements GameMode {
     private cachedSims: AirplaneSim[] = [];
     private listeners = new Set<() => void>();
     private unsubscribeNetwork?: () => void;
+    private pendingSpawns: Vector3[] = []; // Store server-dictated spawns
 
     init() {
         console.log('[FreeFlightMode] Init');
         this.sims.clear();
         this.cachedSims = [];
+        this.pendingSpawns = [];
+
+        // Start Loading (if online)
+        const { currentRoomId } = useStore.getState();
+        if (currentRoomId) {
+            console.log('[FreeFlightMode] Online match detected. Enabling Loading Screen.');
+            useFreeFlightStore.getState().setLoading(true);
+
+            // Failsafe: Disable loading after 5s if network hangs
+            setTimeout(() => {
+                const { isLoading } = useFreeFlightStore.getState();
+                if (isLoading) {
+                    console.warn('[FreeFlightMode] Loading timed out! Forcing disable.');
+                    useFreeFlightStore.getState().setLoading(false);
+                }
+            }, 5000);
+        } else {
+            useFreeFlightStore.getState().setLoading(false);
+        }
 
         // Register Input Profiles
         SessionState.registerDefaultProfile('gamepad', 'FLIGHT', FREE_FLIGHT_GAMEPAD);
@@ -192,7 +226,7 @@ export class FreeFlightModeLogic implements GameMode {
         this.unsubscribeInput = SessionState.onInput(onInput);
 
         // ---- ONLINE: Connect to game server ----
-        const { currentRoomId } = useStore.getState();
+        // Reuse currentRoomId from above
         if (currentRoomId) {
             console.log('[FreeFlightMode] Online mode, connecting to game server for room:', currentRoomId);
             NetworkManager.connectGameServer();
@@ -200,10 +234,9 @@ export class FreeFlightModeLogic implements GameMode {
             this.unsubscribeNetwork = NetworkManager.subscribe((event) => {
                 switch (event.type) {
                     case 'GAME_CONNECTED': {
-                        const pilot = useStore.getState().localParty[0];
-                        const playerName = pilot?.name || 'Unknown';
-                        const entityType = pilot?.airplane || 'interceptor';
-                        NetworkManager.joinGameRoom(currentRoomId, playerName, entityType);
+                        const localParty = useStore.getState().localParty;
+                        console.log('[FreeFlightMode] Joining game room with party:', localParty);
+                        NetworkManager.joinGameRoom(currentRoomId, localParty);
                         break;
                     }
                     case 'ROOM_JOINED': {
@@ -211,19 +244,30 @@ export class FreeFlightModeLogic implements GameMode {
                         applyWorldSnapshot(event.entities, NetworkManager.channelId);
 
                         // SNAP LOCAL SIMS TO SERVER SPAWN POSITIONS
-                        // This prevents multiple clients from overlapping at the hardcoded "Player 0" spawn.
                         const myEntities = event.entities.filter(e => e.ownerId === NetworkManager.channelId);
+
+                        // Store them for sims that haven't been created yet
+                        this.pendingSpawns = myEntities.map(e => new Vector3(e.position[0], e.position[1], e.position[2]));
+                        console.log('[FreeFlightMode] Received server spawns:', this.pendingSpawns);
+
                         let index = 0;
+                        // Snap EXISTING sims immediately
                         this.sims.forEach((sim) => {
                             if (index < myEntities.length) {
                                 const ent = myEntities[index];
-                                console.log('[FreeFlightMode] Snapping Sim', sim.playerId, 'to server spawn:', ent.position);
+                                console.log('[FreeFlightMode] Snapping EXISTING Sim', sim.playerId, 'to server spawn:', ent.position);
                                 sim.position.set(ent.position[0], ent.position[1], ent.position[2]);
                                 sim.quaternion.set(ent.quaternion[0], ent.quaternion[1], ent.quaternion[2], ent.quaternion[3]);
                                 sim.altitude = sim.position.length(); // Update altitude derived from pos
+
+                                // Reset physics velocity too to avoid "momentum" from the snap
+                                sim.setVelocity(0, 0, 0);
                             }
                             index++;
                         });
+
+                        // Stop Loading Screen - We are synced!
+                        useFreeFlightStore.getState().setLoading(false);
                         break;
                     }
                     case 'WORLD_SNAPSHOT': {
@@ -252,6 +296,13 @@ export class FreeFlightModeLogic implements GameMode {
                     }
                 }
             });
+
+            // HANDLE ALREADY CONNECTED STATE
+            if (NetworkManager.isGameConnected) {
+                const localParty = useStore.getState().localParty;
+                console.log('[FreeFlightMode] Already connected. Immediately joining room:', currentRoomId);
+                NetworkManager.joinGameRoom(currentRoomId, localParty);
+            }
         }
 
         this.emitChange();
@@ -291,7 +342,14 @@ export class FreeFlightModeLogic implements GameMode {
                 const pilot = useStore.getState().localParty.find(lp => lp.id === p.id);
                 const selectedType = pilot?.airplane || 'interceptor';
                 console.log('Spawning Sim for Player', p.id, 'with type', selectedType);
-                const spawn = getSpawnPoint(p.id);
+
+                // Use Server Spawn if available (for network play), otherwise local default
+                let spawn = getSpawnPoint(p.id);
+                if (this.pendingSpawns[p.id]) {
+                    console.log('Using PENDING SERVER SPAWN for Player', p.id, this.pendingSpawns[p.id]);
+                    spawn = this.pendingSpawns[p.id];
+                }
+
                 const sim = new AirplaneSim(p.id, spawn, selectedType);
                 this.sims.set(p.id, sim);
                 changed = true;
@@ -329,6 +387,10 @@ export class FreeFlightModeLogic implements GameMode {
             if (NetworkManager.isGameConnected && NetworkManager.localEntityIds.length > 0) {
                 const entityIds = NetworkManager.localEntityIds;
                 let entityIdx = 0;
+
+                // Debug log every 60 frames (approx 1s) to avoid spam
+                const shouldLog = Math.random() < 0.01;
+
                 this.sims.forEach(sim => {
                     if (entityIdx < entityIds.length) {
                         const update: EntityStateUpdate = {
@@ -342,9 +404,19 @@ export class FreeFlightModeLogic implements GameMode {
                                 altitude: sim.altitude,
                             },
                         };
+
+                        if (shouldLog) {
+                            console.log('[FreeFlightMode] Sending update for entity:', update.entityId, 'Pos:', update.position);
+                        }
+
                         NetworkManager.sendStateUpdate(update);
                         entityIdx++;
                     }
+                });
+            } else if (NetworkManager.isGameConnected && Math.random() < 0.01) {
+                console.warn('[FreeFlightMode] Connected but no local entities to sync!', {
+                    connected: NetworkManager.isGameConnected,
+                    localEntityIds: NetworkManager.localEntityIds
                 });
             }
         }

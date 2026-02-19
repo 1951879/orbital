@@ -28,6 +28,9 @@ interface FreeFlightState {
 
     isPaused: boolean;
     setPaused: (paused: boolean) => void;
+
+    isLoading: boolean;
+    setLoading: (loading: boolean) => void;
 }
 
 let nextId = 0;
@@ -58,5 +61,8 @@ export const useFreeFlightStore = create<FreeFlightState>((set, get) => ({
     })),
 
     isPaused: false,
-    setPaused: (paused) => set({ isPaused: paused })
+    setPaused: (paused) => set({ isPaused: paused }),
+
+    isLoading: false,
+    setLoading: (loading) => set({ isLoading: loading })
 }));

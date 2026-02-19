@@ -44,6 +44,13 @@ export class AirplaneSim implements ISimObject {
 
     // Reusable temp vectors
     private _velocity = new Vector3();
+
+    // Public API for velocity (needed for network snapping)
+    public setVelocity(x: number, y: number, z: number) {
+        this._velocity.set(x, y, z);
+        this.currentSpeed = this._velocity.length();
+    }
+
     private _forward = new Vector3();
     private _planetUp = new Vector3();
     private _shipUp = new Vector3();

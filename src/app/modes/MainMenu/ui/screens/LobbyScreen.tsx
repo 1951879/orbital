@@ -77,8 +77,10 @@ export const LobbyScreen: React.FC = () => {
             const localParty = store.localParty;
             const room = store.currentRoomId;
             if (room && localParty.length > 0) {
-                console.log('[LobbyScreen] Joining Game Room:', room, 'with party:', localParty);
-                NetworkManager.joinGameRoom(room, localParty);
+                const terrainSeed = store.terrainSeed;
+                const terrainParams = store.terrainParams;
+                console.log('[LobbyScreen] Joining Game Room:', room, 'with party:', localParty, 'config:', { seed: terrainSeed });
+                NetworkManager.joinGameRoom(room, localParty, { seed: terrainSeed, terrainParams });
             }
         };
 
@@ -88,6 +90,19 @@ export const LobbyScreen: React.FC = () => {
 
         const unsub = NetworkManager.subscribe(e => {
             if (e.type === 'GAME_CONNECTED') onGameConnected();
+            if (e.type === 'LOBBY_UPDATED' && e.lobby.terrainConfig) {
+                // effective sync: if we are not the host (or even if we are, to confirm), set the store
+                // We should probably check if we are the host to avoid loop, 
+                // but since the update comes from server, it is the source of truth.
+                const store = useStore.getState();
+                // Optional: Check if we are host to avoid jitter if we define "Host" as "Local Authority"
+                // But for now, Server is Authority.
+                const lobby = e.lobby;
+
+                // Update local store
+                console.log('[LobbyScreen] Syncing terrain from lobby:', lobby.terrainConfig);
+                useStore.getState().setTerrainConfig(lobby.terrainConfig.seed, lobby.terrainConfig.params);
+            }
         });
         return () => { unsub(); };
     }, []);
@@ -189,6 +204,7 @@ export const LobbyScreen: React.FC = () => {
                     <TerrainPanel
                         focusedItem={isFocused ? focusedItem : -1}
                         showFocus={showFocus && isFocused}
+                        isHost={isHost}
                     />
                 );
             default:

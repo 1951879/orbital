@@ -33,19 +33,27 @@ export const MainMenuContainer: React.FC = () => {
                 const prevIndex = currentIndex - 1;
                 if (prevIndex >= 0) setScreen(TABS[prevIndex]);
             } else if (action === 'LAUNCH') {
-                // Check if Host, In Lobby, and All Ready
-                // We need access to these states. They are not currently in scope of this effect.
-                // We should move this logic or access state here.
-                // However, the LaunchButton component has this logic.
-                // We should probably expose a "launch" function or duplicate the check.
-                // Let's duplicate the check for now as it's simple.
-                const localParty = useStore.getState().localParty; // Access via getState to avoid stale closure if not in dependency
+                const state = useStore.getState();
+                const currentRoomId = state.currentRoomId;
+
+                // 1. Online Launch (Host Only)
+                if (currentRoomId && NetworkManager.isGameConnected) {
+                    // TODO: meaningful host check? For now trust server to ignore non-hosts or UI hides it
+                    // Header.tsx has complex logic to determine if we are the lobby host.
+                    // For now, let's just Try to start it.
+                    console.log('[MainMenuContainer] Gamepad Launch (Network)');
+                    NetworkManager.startMission();
+                    return;
+                }
+
+                // 2. Offline Launch (Local only)
+                const localParty = state.localParty;
                 const isHost = localParty.some(p => p.id === 0);
                 const allReady = localParty.length > 0 && localParty.every(p => p.ui.status === 'ready');
 
                 if (inLobby && allReady && isHost) {
-                    console.log('[MainMenuContainer] Gamepad Launch');
-                    useStore.getState().setMission('free');
+                    console.log('[MainMenuContainer] Gamepad Launch (Local)');
+                    state.setMission('free');
                 }
             } else if (action === 'ABORT') {
                 if (inLobby) {

@@ -93,7 +93,14 @@ export const Header: React.FC = () => {
     const handleLaunch = () => {
         if (launchState !== 'ready') return;
         console.log('[Header] Launching sortie');
-        setMission('free');
+
+        // If online/in-room, send start command to server
+        if (useStore.getState().currentRoomId) {
+            NetworkManager.startMission();
+        } else {
+            // Offline fallback
+            setMission('free');
+        }
     };
 
     const handleAbort = () => {

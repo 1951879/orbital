@@ -131,6 +131,7 @@ export class NetworkManager {
         terrainConfig?: { seed: number; params: any };
         localPlayerCount?: number;
     }) {
+        console.log('[NetworkManager] emit createLobby:', data);
         this.platformSocket?.emit('createLobby', data);
     }
 
@@ -140,6 +141,10 @@ export class NetworkManager {
 
     public static leaveLobby() {
         this.platformSocket?.emit('leaveLobby');
+    }
+
+    public static updateLobbySettings(lobbyId: string, terrainConfig: { seed: number; params: any }) {
+        this.platformSocket?.emit('updateLobbySettings', { lobbyId, terrainConfig });
     }
 
     // ============================================================
@@ -193,7 +198,7 @@ export class NetworkManager {
     }
 
     /** Join a game room. Called after lobby creation/join provides a roomId. */
-    public static joinGameRoom(roomId: string, party: any[]) { // LocalPilot[] but avoiding import cycle
+    public static joinGameRoom(roomId: string, party: any[], config?: { seed: number, terrainParams: any }) { // LocalPilot[] but avoiding import cycle
         if (!this.gameChannel || !this._isGameConnected) {
             console.warn('[NetworkManager] Cannot join room — not connected to game server');
             return;
@@ -206,10 +211,15 @@ export class NetworkManager {
             pilotId: p.id
         }));
 
+        console.log('[NetworkManager] joinGameRoom called for roomId:', roomId);
+        console.log('[NetworkManager] Players:', players);
+
         this.gameChannel.emit('joinRoom', {
             roomId,
             players,
+            config,
         } as any, { reliable: true });
+        console.log('[NetworkManager] joinRoom event emitted.');
     }
 
     /** Leave the current game room. */
@@ -230,6 +240,26 @@ export class NetworkManager {
         this.gameChannel.emit('playerMetadataUpdate', metadata as any, { reliable: true });
     }
 
+    public static updateRoomConfig(config: { seed?: number; terrainParams?: any }) {
+        if (!this.gameChannel || !this._isGameConnected) return;
+        this.gameChannel.emit('updateRoomConfig', config as any, { reliable: true });
+    }
+
+    public static startMission() {
+        console.log('[NetworkManager] startMission called');
+        if (!this.gameChannel || !this._isGameConnected) {
+            console.warn('[NetworkManager] startMission failed: not connected', {
+                channel: !!this.gameChannel,
+                connected: this._isGameConnected
+            });
+            return;
+        }
+        console.log('[NetworkManager] Emitting startMission');
+        this.gameChannel.emit('startMission', {}, { reliable: true });
+    }
+
+
+
     // ============================================================
     // LEGACY METHODS (backward compatibility)
     // ============================================================
@@ -237,6 +267,8 @@ export class NetworkManager {
     public static connect(url?: string) {
         this.connectPlatform(url || 'http://localhost:3002');
     }
+    // ... (skipping to listener)
+
 
     public static disconnect() {
         this.disconnectPlatform();
@@ -391,12 +423,35 @@ export class NetworkManager {
             this.emit({ type: 'ENTITY_SPAWNED', entity });
         });
 
+        // Room config updated (reliable)
+        channel.on('roomConfigUpdated', (data: any) => {
+            const config = data as any;
+            console.log('[NetworkManager] Room config updated:', config);
+
+            // Map RoomConfig (terrainParams) to LobbyInfo (params)
+            const terrainConfig = {
+                seed: config.seed,
+                params: config.terrainParams
+            };
+
+            this.emit({
+                type: 'LOBBY_UPDATED',
+                lobby: { terrainConfig } as any
+            });
+        });
+
         // Entity destroyed (reliable) — another player left
         channel.on('entityDestroyed', (data: any) => {
             const { entityId } = data as { entityId: string };
             console.log('[NetworkManager] Entity destroyed:', entityId);
             this._localEntityIds = this._localEntityIds.filter(id => id !== entityId);
             this.emit({ type: 'ENTITY_DESTROYED', entityId });
+        });
+
+        // Mission Started (reliable)
+        channel.on('missionStarted', () => {
+            console.log('[NetworkManager] Mission started');
+            this.emit({ type: 'MISSION_STARTED' } as any);
         });
 
         // World snapshot (unreliable, ~60Hz) — all entity states

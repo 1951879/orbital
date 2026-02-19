@@ -86,6 +86,7 @@ export const PlaySelectScreen: React.FC = () => {
 
         if (isOnline) {
             // Online: create lobby via platform services
+            console.log('[PlaySelect] Creating lobby with terrain config:', { seed: terrainSeed });
             NetworkManager.createLobby({
                 name: `${hostName}'s Lobby`,
                 hostName,
