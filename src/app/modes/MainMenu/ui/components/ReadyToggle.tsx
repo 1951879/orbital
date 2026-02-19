@@ -4,8 +4,8 @@ import { useSlotHints } from '../../../../core/hooks/useInputHints';
 
 interface ReadyToggleProps {
     isReady: boolean;
-    hints: ReturnType<typeof useSlotHints>;
-    onClick: () => void;
+    hints?: ReturnType<typeof useSlotHints>;
+    onClick?: () => void;
     className?: string;
 }
 
@@ -13,13 +13,18 @@ export const ReadyToggle: React.FC<ReadyToggleProps> = ({ isReady, hints, onClic
     return (
         <div
             className={`flex items-center gap-2 cursor-pointer group select-none ${className}`}
-            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            onClick={(e) => {
+                if (onClick) {
+                    e.stopPropagation();
+                    onClick();
+                }
+            }}
         >
             {/* Label Container - Fixed width to match largest content (ENTER key) and right aligned */}
-            <div className={`flex items-center justify-end gap-1.5 min-w-[55px] text-[10px] font-bold uppercase tracking-widest transition-colors ${isReady ? 'text-green-400' : 'text-slate-500 group-hover:text-slate-300'}`}>
-                {hints.showGamepad ? (
+            <div className={`flex items-center justify-end gap-1.5 min-w-[60px] text-[10px] font-bold uppercase tracking-widest transition-colors ${isReady ? 'text-green-400' : 'text-slate-500 group-hover:text-slate-300'}`}>
+                {hints?.showGamepad ? (
                     <GamepadButton type={hints.gamepadType} button="X" />
-                ) : hints.showKeyboard ? (
+                ) : hints?.showKeyboard ? (
                     <span className="h-4 min-w-[16px] px-1 border border-current rounded flex items-center justify-center text-[9px]">
                         {hints.keyboardReadyKey || 'R'}
                     </span>

@@ -1,0 +1,14 @@
+﻿src/App.tsx(12,120): error TS2307: Cannot find module './app/core/input/DefaultProfiles' or its corresponding type declarations.
+src/app/components/ui/GameHUD.tsx(12,48): error TS2339: Property 'isPaused' does not exist on type 'AppState'.
+src/app/components/ui/GameHUD.tsx(27,37): error TS2339: Property 'isPaused' does not exist on type 'AppState'.
+src/app/core/entities/effects/ScannerCone.tsx(5,26): error TS2307: Cannot find module '../../store/useStore' or its corresponding type declarations.
+src/app/core/env/BlueprintSphere.tsx(17,46): error TS2339: Property 'isPaused' does not exist on type 'AppState'.
+src/engine/render/cameras/index.ts(6,29): error TS2307: Cannot find module './ChaseCamera' or its corresponding type declarations.
+src/engine/render/cameras/index.ts(7,32): error TS2307: Cannot find module './SquadronCamera' or its corresponding type declarations.
+src/engine/render/cameras/index.ts(10,15): error TS2307: Cannot find module './utils/CameraUtils' or its corresponding type declarations.
+src/engine/render/cameras/index.ts(11,15): error TS2307: Cannot find module './utils/ViewOffset' or its corresponding type declarations.
+src/engine/render/SceneRoot.tsx(105,39): error TS2339: Property 'getLayoutOverride' does not exist on type 'GameMode'.
+src/hooks/useArcadeInput.ts(14,49): error TS2339: Property 'joinParty' does not exist on type 'AppState'.
+src/hooks/useArcadeInput.ts(15,50): error TS2339: Property 'leaveParty' does not exist on type 'AppState'.
+src/hooks/useFlightInput.ts(12,48): error TS2339: Property 'isPaused' does not exist on type 'AppState'.
+src/hooks/useFlightInput.ts(13,51): error TS2339: Property 'setIsPaused' does not exist on type 'AppState'.

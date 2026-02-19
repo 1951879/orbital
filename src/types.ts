@@ -55,7 +55,8 @@ export type PilotStatus = 'joining' | 'selecting' | 'ready';
 export interface LocalPilot {
   id: number;           // 0, 1, 2, 3 (Index)
   sessionId: number;    // Engine Session ID (usually matches id)
-  name: string;         // "Red Leader"
+  uniqueId: string;     // Unique String ID (Random 8-char)
+  name: string;         // Derived from uniqueId
   color: string;        // hex
   team: 1 | 2;
 
@@ -76,7 +77,11 @@ export interface LocalPilot {
 
 export interface RemotePlayerInfo {
   id: string;
-  type: AirplaneType;
+  name: string;
+  airplane: AirplaneType;
+  color: string; // hex
+  isReady: boolean;
+  joinedAt: number;
 }
 
 
@@ -88,10 +93,15 @@ export interface RemotePlayerInfo {
 export interface LobbyInfo {
   id: string;
   name: string;
+  hostName: string;
+  mode: string;               // "free_flight", "tdm", etc.
   playerCount: number;
   maxPlayers: number;
-  mission: MissionType;
-  params: TerrainParams; // To preview size
+  gameServerAddress: string;
+  terrainConfig: {
+    seed: number;
+    params: TerrainParams;
+  };
 }
 
 export interface AppState {
@@ -168,6 +178,7 @@ export interface AppState {
 
   // Actions
   generateNewTerrain: () => void;
+  setTerrainConfig: (seed: number, params: TerrainParams) => void;
   setTerrainParam: (key: keyof TerrainParams, value: number) => void;
 
   // Camera Control

@@ -1,4 +1,4 @@
 export const DebugConfig = {
-    showFPSMeter: false,
+    showFPSMeter: true,
     showFlightTuning: true,
 };

@@ -6,11 +6,12 @@ import { ReadyToggle } from '../components/ReadyToggle';
 import { GamepadButton } from '@/src/app/core/ui/GamepadIcons';
 import { useSlotInput } from '../../hooks/useSlotInput';
 import { useSlotHints, useHostHints } from '../../../../core/hooks/useInputHints';
+import { NetworkManager } from '../../../../../engine/session/NetworkManager';
 
 interface RosterPanelProps {
     focusedItem: number;
     showFocus: boolean;
-    isHost: boolean;
+    isHost: boolean; // Local Party Leader status (Passed from LobbyScreen)
 }
 
 // ─── PLAYER CARD ─────────────────────────────────────────────────────────────
@@ -19,10 +20,14 @@ interface PlayerCardProps {
     slotIdx: number;
     pilot: any;
     isFocused: boolean;
-    isHost: boolean;
+    isHostView: boolean; // "Is the viewer the lobby host?" (Controls Kick/Resign permissions)
+    isLobbyHost: boolean; // "Is THIS player the lobby host?" (Controls Crown icon)
+    isLocalPartyLeader: boolean; // For border styling
+    isLocal: boolean;
+    displayColor: string;
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({ slotIdx, pilot, isFocused, isHost }) => {
+const PlayerCard: React.FC<PlayerCardProps> = ({ slotIdx, pilot, isFocused, isHostView, isLobbyHost, isLocalPartyLeader, isLocal, displayColor }) => {
     const updatePilot = useStore(state => state.updatePilot);
     const openRosterMenu = useMainMenuStore(state => state.openRosterMenu);
     const setOpenRosterMenu = useMainMenuStore(state => state.setOpenRosterMenu);
@@ -30,9 +35,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ slotIdx, pilot, isFocused, isHo
     const isReady = pilot.ui.status === 'ready';
     const isOpen = openRosterMenu === slotIdx;
     const cardRef = useRef<HTMLDivElement>(null);
-
-    // Track which button in the tray is focused (0..N)
-    // const [trayFocusIndex, setTrayFocusIndex] = useState(0); // MOVED TO GLOBAL STORE
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -72,48 +74,63 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ slotIdx, pilot, isFocused, isHo
     // Toggle Ready Logic
     const handleReady = () => {
         const newStatus = pilot.ui.status === 'ready' ? 'selecting' : 'ready';
+        // 1. Local Update (Instant feedback + Offline support)
         updatePilot(slotIdx, { ui: { ...pilot.ui, status: newStatus } });
+
+        // 2. Network Sync (If online)
+        if (useStore.getState().isOnline) {
+            // We need to construct the unique ID for this pilot
+            // Rule: channelId + "_" + pilotId
+            const channelId = NetworkManager.channelId;
+            if (channelId) {
+                NetworkManager.sendPlayerMetadata({
+                    playerId: `${channelId}_${pilot.id}`,
+                    isReady: newStatus === 'ready'
+                });
+            }
+        }
     };
 
     const isHostSlot = slotIdx === 0;
-    // Determine available actions for this slot
-    // Host on own slot: Resign
-    // Host on other slot: Ring, MakeHost, Kick
-    // Client on own slot: MakeHost (if enabled?), Resign (N/A) -> Actually client only sees Ring/MakeHost on others?
-    // Spec: "if a player opens their own tray they will only see the makehost/ resign as host buttons"
-    // Spec: "if a non host player opens another player's tray, they should only see the makehost and ring buttons"
 
-    // Let's define the actions array dynamically
-    // But for now, let's stick to the structure we have in JSX and map indices to it.
-    // Host Slot (0): [Resign] (length 1)
-    // Other Slots (>0): [Ring, MakeHost, Kick] (length 3, indices 0,1,2)
-    // Wait, the spec says "only the host can kick players".
-    // So if I am a client looking at another client, I see Ring, MakeHost. (length 2)
+    // Style determination
+    // 1. Uniform Background
+    const bgClass = 'bg-slate-950/60';
 
-    // For simplicity in this iteration, assuming we are the HOST viewing this or conforming to the UI structure:
-    // The current JSX has two branches: isHostSlot ? (1 button) : (3 buttons).
-    // The 'Kick' button is only valid if I am the host.
-    // Let's refine the button count so navigation works.
+    // 2. Base Border & Glows
+    let borderClass = 'border-white/20'; // More visible base
+    if (isReady) {
+        borderClass = 'border-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.2)]';
+    }
 
-    const isLocalUserHost = isHost; // Passed from props
-    // We need to know WHO is opening the menu to decide what buttons to show.
-    // But keeping it simple based on the current UI structure:
-    // If isHostSlot -> 1 button.
-    // Else -> 3 buttons (Ring, MakeHost, Kick).
-    // We should probably hide Kick if !isHost.
+    // 3. Focus Override (Maintains BG, overrides border color)
+    if (isFocused) {
+        borderClass = 'border-blue-500/80 shadow-[0_0_12px_rgba(59,130,246,0.4)]';
+    }
 
-    const buttonCount = isHostSlot ? 1 : (isHost ? 3 : 2); // Hide Kick if not host
+    // 4. Local Indicator (Persistent Left Border)
+    // "keep indicators on left", "visible when ready", "non-leader more yellow"
+    if (isLocal) {
+        // Leader: Amber-400 (Bright)
+        // Member: Yellow-700 (Dimmer/Darker Yellow)
+        const indicatorColor = isLocalPartyLeader ? 'border-l-yellow-400' : 'border-l-yellow-400/35';
+        borderClass += ` border-l-[4px] ${indicatorColor}`;
+    }
 
-    const trayWidth = isHostSlot ? '56px' : (isHost ? '168px' : '112px');
-    const trayInnerWidth = isHostSlot ? 'w-[56px]' : (isHost ? 'w-[168px]' : 'w-[112px]');
-
-    // Input Handling
     const isActive = !!pilot;
     const hints = useSlotHints(pilot);
     const hostHints = useHostHints();
     const trayFocusIndex = useMainMenuStore(state => state.rosterTrayIndex);
+    const trayWidth = isHostSlot ? '56px' : (isHostView ? '168px' : '112px');
+    const trayInnerWidth = isHostSlot ? 'w-[56px]' : (isHostView ? 'w-[168px]' : 'w-[112px]');
 
-    // Only the OWNER of the slot can Toggle Ready or Close their own menu via B
+    const getTrayButtonStyle = (index: number) => {
+        const isSelected = isOpen && trayFocusIndex === index;
+        return isSelected
+            ? 'bg-amber-500 text-slate-900 shadow-[0_0_8px_rgba(245,158,11,0.5)] z-10' // Active/Focused style
+            : 'text-slate-400 hover:text-amber-400 hover:bg-amber-500/10';
+    };
+
     useSlotInput(
         pilot?.input.type || 'gamepad',
         pilot?.input.deviceId || '',
@@ -127,45 +144,23 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ slotIdx, pilot, isFocused, isHo
         }
     );
 
-    // Helper to get focus style for tray buttons
-    const getTrayButtonStyle = (index: number) => {
-        const isSelected = isOpen && trayFocusIndex === index;
-        return isSelected
-            ? 'bg-amber-500 text-slate-900 shadow-[0_0_8px_rgba(245,158,11,0.5)] z-10' // Active/Focused style
-            : 'text-slate-400 hover:text-amber-400 hover:bg-amber-500/10';
-    };
-
-    // Actions are now handled in LobbyScreen via onTrayAction
-    // We just render the buttons visuals.
-    // NOTE: Mouse click handlers still needed for mouse support?
-    // references handleRing, handleMakeHost, handleKick, handleResignHost which we should probably keep for mouse clicks
-    // or we can remove them if we rely 100% on the global input?
-    // Let's keep them for mouse clicks for now, but they should really call the same logic.
-    // actually checking the previous implementation, handleKick calls SessionState.removePlayer directly
-    // which matches LobbyScreen logic. So keeping them is fine for mouse.
-
     return (
         <div
             ref={cardRef}
-            className={`relative flex items-stretch rounded-lg border transition-all ${isOpen ? 'z-50 overflow-visible' : 'overflow-hidden'} ${isFocused
-                ? 'border-blue-500/70 bg-blue-600/10 shadow-[0_0_12px_rgba(59,130,246,0.15)]'
-                : isReady
-                    ? 'bg-green-900/20 border-green-500/30'
-                    : 'bg-white/5 border-white/5'
-                }`}
+            className={`relative flex items-stretch rounded-lg border transition-all ${isOpen ? 'z-50 overflow-visible' : 'overflow-hidden'} ${bgClass} ${borderClass}`}
         >
             {/* Card Content */}
             <div className="flex items-center gap-3 px-3 py-2.5 flex-1 min-w-0">
                 {/* Color dot */}
                 <div
                     className="w-2.5 h-2.5 rounded-full shrink-0 shadow-lg"
-                    style={{ backgroundColor: pilot.color, boxShadow: `0 0 8px ${pilot.color}40` }}
+                    style={{ backgroundColor: displayColor, boxShadow: `0 0 8px ${displayColor}40` }}
                 />
                 {/* Name + plane */}
                 <div className="flex-1 min-w-0">
                     <div className="text-xs font-bold text-white uppercase tracking-wider truncate flex items-center gap-1.5">
                         {pilot.name}
-                        {slotIdx === 0 && (
+                        {isLobbyHost && (
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3 text-amber-400 shrink-0" style={{ filter: 'drop-shadow(0 0 3px rgba(251,191,36,0.4))' }}>
                                 <path d="M2 17l2-11 5 5 3-7 3 7 5-5 2 11H2zm1 1h18v2H3v-2z" />
                             </svg>
@@ -181,8 +176,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ slotIdx, pilot, isFocused, isHo
             <div className="flex items-center px-2 border-l border-white/5">
                 <ReadyToggle
                     isReady={isReady}
-                    hints={hints}
-                    onClick={handleReady}
+                    hints={isLocal ? hints : undefined}
+                    onClick={isLocal ? handleReady : undefined}
                     className="scale-90 origin-right"
                 />
             </div>
@@ -229,7 +224,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ slotIdx, pilot, isFocused, isHo
                                 </svg>
                             </button>
                             {/* Kick - Only show if host */}
-                            {isHost && (
+                            {isHostView && (
                                 <button
                                     onClick={handleKick}
                                     className={`flex-1 flex items-center justify-center transition-all border-l border-white/10 ${getTrayButtonStyle(2)}`}
@@ -301,9 +296,120 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ slotIdx, pilot, isFocused, isHo
 
 export const RosterPanel: React.FC<RosterPanelProps> = ({ focusedItem, showFocus, isHost }) => {
     const localParty = useStore(state => state.localParty);
+    const remotePlayers = useStore(state => state.remotePlayers);
     const openRosterMenu = useMainMenuStore(state => state.openRosterMenu);
 
+    // Sort logic: "sort the players in the roster by the order they joined the lobby"
+    const isOnline = useStore(state => state.isOnline);
+    const myChannelId = NetworkManager.channelId;
+
     const hostHints = useHostHints();
+
+    // Build Uniform Display List
+    const displayList = React.useMemo(() => {
+        // Prevent "Offline Jump": If online but no data, return empty to show loading
+        if (isOnline && remotePlayers.length === 0) {
+            return [];
+        }
+
+        if (!isOnline || !myChannelId) {
+            // Offline Mode: Show Local Party
+            return localParty.map((p, index) => {
+                const total = localParty.length;
+                const hue = (index / total) * 360;
+                return {
+                    id: `local_${p.id}`,
+                    name: p.name,
+                    airplane: p.airplane,
+                    color: p.color,
+                    isReady: p.ui.status === 'ready',
+                    joinedAt: 0,
+                    isLocal: true,
+                    localSlotIdx: p.id,
+                    pilot: p,
+                    isLocalPartyLeader: p.id === 0,
+                    isLobbyHost: p.id === 0,
+                    displayColor: `hsl(${hue}, 80%, 60%)`,
+                };
+            });
+        }
+
+        // Online & Have Data
+        const merged = remotePlayers.map(rp => {
+            const isLocal = rp.id.startsWith(myChannelId + '_');
+            let localPilot: any = null;
+            let localSlotIdx = -1;
+
+            if (isLocal) {
+                const parts = rp.id.split('_');
+                const pilotId = parseInt(parts[parts.length - 1]);
+                if (!isNaN(pilotId)) {
+                    localPilot = localParty.find(p => p.id === pilotId);
+                    localSlotIdx = pilotId;
+                }
+            }
+
+            return {
+                id: rp.id,
+                name: rp.name,
+                airplane: rp.airplane,
+                color: rp.color,
+                isReady: localPilot ? (localPilot.ui.status === 'ready') : rp.isReady,
+                joinedAt: rp.joinedAt || 0,
+                isLocal,
+                localSlotIdx,
+                pilot: localPilot || {
+                    id: -1,
+                    name: rp.name,
+                    airplane: rp.airplane,
+                    color: rp.color,
+                    ui: { status: rp.isReady ? 'ready' : 'selecting' },
+                    input: { type: 'network', deviceId: rp.id }
+                },
+                isLocalPartyLeader: isLocal && localSlotIdx === 0,
+                isLobbyHost: false, // Calculate after sort
+            };
+        });
+
+        // Add pending locals
+        localParty.forEach(lp => {
+            const expectedId = `${myChannelId}_${lp.id}`;
+            if (!merged.find(m => m.id === expectedId)) {
+                merged.push({
+                    id: expectedId,
+                    name: lp.name,
+                    airplane: lp.airplane,
+                    color: lp.color,
+                    isReady: lp.ui.status === 'ready',
+                    joinedAt: Date.now(),
+                    isLocal: true,
+                    localSlotIdx: lp.id,
+                    pilot: lp,
+                    isLocalPartyLeader: lp.id === 0,
+                    isLobbyHost: false,
+                });
+            }
+        });
+
+        // Sort: Earliest joinedAt is top
+        const sorted = merged.sort((a, b) => (a.joinedAt - b.joinedAt) || a.id.localeCompare(b.id));
+
+        // Assign colors based on sorted position
+        return sorted.map((p, index) => {
+            const total = sorted.length;
+            const hue = (index / total) * 360;
+            return {
+                ...p,
+                isLobbyHost: index === 0,
+                displayColor: `hsl(${hue}, 80%, 60%)`
+            };
+        });
+
+    }, [isOnline, myChannelId, remotePlayers, localParty]);
+
+    // Derive Host Privileges (for Kick/Resign actions)
+    // "Am I the lobby host?" = "Is the top player (Crown) a local player?"
+    const amILobbyHost = displayList.length > 0 && displayList[0].isLocal;
 
     return (
         <div className="flex flex-col h-full relative">
@@ -313,20 +419,37 @@ export const RosterPanel: React.FC<RosterPanelProps> = ({ focusedItem, showFocus
             )}
 
             <div className={`flex flex-col gap-1.5 flex-1 p-3 ${openRosterMenu !== null ? 'overflow-visible' : 'overflow-y-auto'}`}>
-                {localParty.map((pilot, index) => {
-                    const slotIdx = pilot.id;
-                    const isFocused = showFocus && focusedItem === index;
+                {displayList.length === 0 && isOnline ? (
+                    <div className="flex items-center justify-center h-full opacity-50">
+                        <div className="flex flex-col items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-slate-500 border-t-white rounded-full animate-spin" />
+                            <span className="text-[10px] uppercase tracking-widest text-slate-400">Connecting</span>
+                        </div>
+                    </div>
+                ) : (
+                    displayList.map((item, index) => {
+                        const isFocused = showFocus && focusedItem === index;
 
-                    return (
-                        <PlayerCard
-                            key={slotIdx}
-                            slotIdx={slotIdx}
-                            pilot={pilot}
-                            isFocused={isFocused}
-                            isHost={isHost}
-                        />
-                    );
-                })}
+                        return (
+                            <div key={item.id} className="relative">
+
+
+                                <PlayerCard
+                                    slotIdx={item.isLocal ? item.localSlotIdx : -1}
+                                    pilot={item.pilot}
+                                    isFocused={isFocused}
+                                    isHostView={amILobbyHost} // Correctly derived from Roster Order, ignoring ambiguous 'isHost' prop
+                                    isLobbyHost={item.isLobbyHost}
+                                    isLocalPartyLeader={item.isLocalPartyLeader}
+                                    isLocal={item.isLocal}
+                                    displayColor={item.displayColor}
+                                />
+
+
+                            </div>
+                        );
+                    })
+                )}
             </div>
         </div>
     );

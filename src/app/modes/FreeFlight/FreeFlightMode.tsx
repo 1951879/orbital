@@ -7,9 +7,12 @@ import { useFreeFlightStore } from './useFreeFlightStore';
 import { BlueprintSphere } from '../../core/env/BlueprintSphere';
 import { AirplaneView } from '../../core/entities/Airplane/AirplaneView';
 import { AirplaneSim } from '../../core/entities/Airplane/AirplaneSim';
+import { RemoteAirplane } from '../../core/entities/Airplane/RemoteAirplane';
 import { SunLight } from '../../core/env/SunLight';
 import { useStore } from '../../store/useStore';
-import { GameHUD } from '../../core/ui/components/hud/GameHUD'; // Import HUD
+import { useRemoteEntities, applyWorldSnapshot } from '../../store/useRemoteEntities';
+import { GameHUD } from '../../core/ui/components/hud/GameHUD';
+import { NetworkManager, EntityStateUpdate } from '../../../engine/session/NetworkManager';
 
 import { PhysicsWorld } from '../../../engine/sim/PhysicsWorld';
 import { FREE_FLIGHT_GAMEPAD, FREE_FLIGHT_KB1, FREE_FLIGHT_KB2 } from './input/FreeFlightInput';
@@ -62,28 +65,37 @@ const FreeFlightViewport: React.FC<{
 };
 
 const FreeFlightScene: React.FC<{ mode: FreeFlightModeLogic }> = ({ mode }) => {
-    // Subscribe to Sims List
+    // Subscribe to Local Sims List
     const sims = useSyncExternalStore(
         (cb) => mode.subscribe(cb),
         () => mode.getSims()
     );
 
-    const isPaused = useFreeFlightStore(state => state.isPaused); // Move Hook to Top Level
+    const isPaused = useFreeFlightStore(state => state.isPaused);
+
+    // Remote entity IDs (Zustand — only re-renders on entity add/remove)
+    const remoteEntityIds = useRemoteEntities(state => state.entityIds);
 
     return (
         <>
             <SunLight />
             <BlueprintSphere />
 
+            {/* Local players */}
             {sims.map(sim => (
                 <React.Fragment key={sim.playerId}>
                     <AirplaneView
                         sim={sim}
                         playerId={sim.playerId}
-                        paused={isPaused} // Use Variable
+                        paused={isPaused}
                     />
                     <TelemetryBridge sim={sim} playerId={sim.playerId} />
                 </React.Fragment>
+            ))}
+
+            {/* Remote players (from game server — read mutable state in useFrame) */}
+            {remoteEntityIds.map(entityId => (
+                <RemoteAirplane key={entityId} entityId={entityId} />
             ))}
         </>
     );
@@ -138,6 +150,7 @@ export class FreeFlightModeLogic implements GameMode {
     private sims = new Map<number, AirplaneSim>();
     private cachedSims: AirplaneSim[] = [];
     private listeners = new Set<() => void>();
+    private unsubscribeNetwork?: () => void;
 
     init() {
         console.log('[FreeFlightMode] Init');
@@ -178,6 +191,69 @@ export class FreeFlightModeLogic implements GameMode {
         };
         this.unsubscribeInput = SessionState.onInput(onInput);
 
+        // ---- ONLINE: Connect to game server ----
+        const { currentRoomId } = useStore.getState();
+        if (currentRoomId) {
+            console.log('[FreeFlightMode] Online mode, connecting to game server for room:', currentRoomId);
+            NetworkManager.connectGameServer();
+
+            this.unsubscribeNetwork = NetworkManager.subscribe((event) => {
+                switch (event.type) {
+                    case 'GAME_CONNECTED': {
+                        const pilot = useStore.getState().localParty[0];
+                        const playerName = pilot?.name || 'Unknown';
+                        const entityType = pilot?.airplane || 'interceptor';
+                        NetworkManager.joinGameRoom(currentRoomId, playerName, entityType);
+                        break;
+                    }
+                    case 'ROOM_JOINED': {
+                        useRemoteEntities.getState().setRoomState(event.roomId, true);
+                        applyWorldSnapshot(event.entities, NetworkManager.channelId);
+
+                        // SNAP LOCAL SIMS TO SERVER SPAWN POSITIONS
+                        // This prevents multiple clients from overlapping at the hardcoded "Player 0" spawn.
+                        const myEntities = event.entities.filter(e => e.ownerId === NetworkManager.channelId);
+                        let index = 0;
+                        this.sims.forEach((sim) => {
+                            if (index < myEntities.length) {
+                                const ent = myEntities[index];
+                                console.log('[FreeFlightMode] Snapping Sim', sim.playerId, 'to server spawn:', ent.position);
+                                sim.position.set(ent.position[0], ent.position[1], ent.position[2]);
+                                sim.quaternion.set(ent.quaternion[0], ent.quaternion[1], ent.quaternion[2], ent.quaternion[3]);
+                                sim.altitude = sim.position.length(); // Update altitude derived from pos
+                            }
+                            index++;
+                        });
+                        break;
+                    }
+                    case 'WORLD_SNAPSHOT': {
+                        applyWorldSnapshot(event.snapshot.entities, NetworkManager.channelId);
+                        break;
+                    }
+                    case 'ENTITY_SPAWNED': {
+                        if (event.entity.ownerId !== NetworkManager.channelId) {
+                            useRemoteEntities.getState().addEntity(
+                                event.entity.id,
+                                event.entity.type,
+                                event.entity.ownerId,
+                                event.entity.position,
+                                event.entity.quaternion
+                            );
+                        }
+                        break;
+                    }
+                    case 'ENTITY_DESTROYED': {
+                        useRemoteEntities.getState().removeEntity(event.entityId);
+                        break;
+                    }
+                    case 'GAME_DISCONNECTED': {
+                        useRemoteEntities.getState().clear();
+                        break;
+                    }
+                }
+            });
+        }
+
         this.emitChange();
     }
 
@@ -188,10 +264,18 @@ export class FreeFlightModeLogic implements GameMode {
         this.sims.clear();
         this.cachedSims = [];
         if (this.unsubscribeInput) this.unsubscribeInput();
+
+        // Cleanup network
+        if (this.unsubscribeNetwork) {
+            this.unsubscribeNetwork();
+            this.unsubscribeNetwork = undefined;
+        }
+        NetworkManager.leaveGameRoom();
+        NetworkManager.disconnectGameServer();
+        useRemoteEntities.getState().clear();
+
         this.emitChange();
         this.listeners.clear();
-
-        // Ensure paused is false when leaving? Or let next mode handle it.
         useFreeFlightStore.getState().setPaused(false);
     }
 
@@ -240,6 +324,29 @@ export class FreeFlightModeLogic implements GameMode {
 
             // 4. Update Projectiles
             useFreeFlightStore.getState().updateProjectiles(dt);
+
+            // 5. ONLINE: Send local entity state to game server
+            if (NetworkManager.isGameConnected && NetworkManager.localEntityIds.length > 0) {
+                const entityIds = NetworkManager.localEntityIds;
+                let entityIdx = 0;
+                this.sims.forEach(sim => {
+                    if (entityIdx < entityIds.length) {
+                        const update: EntityStateUpdate = {
+                            entityId: entityIds[entityIdx],
+                            position: [sim.position.x, sim.position.y, sim.position.z],
+                            quaternion: [sim.quaternion.x, sim.quaternion.y, sim.quaternion.z, sim.quaternion.w],
+                            velocity: [0, 0, 0], // Not exposed publicly; server validates via position delta
+                            custom: {
+                                throttle: sim.throttle,
+                                currentSpeed: sim.currentSpeed,
+                                altitude: sim.altitude,
+                            },
+                        };
+                        NetworkManager.sendStateUpdate(update);
+                        entityIdx++;
+                    }
+                });
+            }
         }
     }
 

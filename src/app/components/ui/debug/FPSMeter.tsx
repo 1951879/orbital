@@ -47,7 +47,7 @@ export const FPSMeter: React.FC = () => {
     if (!DebugConfig.showFPSMeter) return null;
 
     return (
-        <div className="fixed z-[10000] top-0 left-0 bg-black border border-white/10 p-1 rounded pointer-events-auto select-none shadow-lg flex flex-col items-center group">
+        <div className="fixed z-[10000] bottom-0 left-0 bg-black border border-white/10 p-1 rounded pointer-events-auto select-none shadow-lg flex flex-col items-center group">
             <svg width="60" height="30" className="overflow-hidden">
                 <polyline
                     fill="none"

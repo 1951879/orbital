@@ -17,6 +17,7 @@ import { SessionState } from '../../../../../engine/session/SessionState';
 import { useHostHints } from '../../../../core/hooks/useInputHints';
 import { PRESETS } from '../../../../components/ui/tabs/data';
 import { TerrainParams } from '../../../../../types';
+import { NetworkManager } from '../../../../../engine/session/NetworkManager';
 
 // ─── PANEL LABEL REGISTRY ────────────────────────────────────────────────────
 
@@ -66,6 +67,30 @@ export const LobbyScreen: React.FC = () => {
     const hostHints = useHostHints();
 
     const isHost = localParty.some(p => p.id === 0);
+    const inLobby = useMainMenuStore(state => state.inLobby);
+
+    // ─── Auto-Join Game Room (Briefing Phase) ───────────────
+    React.useEffect(() => {
+        const onGameConnected = () => {
+            const store = useStore.getState();
+            // Pass the entire local party, not just the first pilot
+            const localParty = store.localParty;
+            const room = store.currentRoomId;
+            if (room && localParty.length > 0) {
+                console.log('[LobbyScreen] Joining Game Room:', room, 'with party:', localParty);
+                NetworkManager.joinGameRoom(room, localParty);
+            }
+        };
+
+        if (NetworkManager.isGameConnected) {
+            onGameConnected();
+        }
+
+        const unsub = NetworkManager.subscribe(e => {
+            if (e.type === 'GAME_CONNECTED') onGameConnected();
+        });
+        return () => { unsub(); };
+    }, []);
 
     // ─── Panel descriptors (O/C: each panel declares its own behavior) ──
     const panelDescriptors: LobbyPanelDescriptor[] = useMemo(() => [

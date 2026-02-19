@@ -9,6 +9,7 @@ export const useNetworkSync = () => {
     const setPing = useStore((state) => state.setPing);
     const addRemotePlayer = useStore((state) => state.addRemotePlayer);
     const removeRemotePlayer = useStore((state) => state.removeRemotePlayer);
+    const setRemotePlayers = useStore((state) => state.setRemotePlayers);
     const setLobbies = useStore((state) => state.setLobbies);
 
     // @ts-ignore
@@ -25,7 +26,7 @@ export const useNetworkSync = () => {
         }
 
         const protocol = window.location.protocol;
-        const socketUrl = `${protocol}//${window.location.hostname}:3001`;
+        const socketUrl = `${protocol}//${window.location.hostname}:3002`;
 
         // Subscribe BEFORE connecting to catch initial events
         const unsubscribe = NetworkManager.subscribe((event) => {
@@ -38,12 +39,11 @@ export const useNetworkSync = () => {
                     setPing(0);
                     setLobbies([]);
                     break;
-                case 'LOBBY_UPDATE':
+                case 'LOBBY_LIST':
                     setLobbies(event.lobbies);
                     break;
-                case 'WORLD_INIT':
-                    setTerrainSeed(event.data.seed);
-                    setAllTerrainParams(event.data.params);
+                case 'ROOM_JOINED':
+                    setRemotePlayers(event.players);
                     break;
                 case 'PLAYER_JOINED':
                     addRemotePlayer(event.player);
@@ -53,28 +53,6 @@ export const useNetworkSync = () => {
                     break;
                 case 'LATENCY':
                     setPing(event.ms);
-                    break;
-                case 'SYNC':
-                    // Update mutable store directly
-                    Object.values(event.entities).forEach((data: any) => {
-                        const entry = remoteTelemetry.get(data.id);
-                        if (entry) {
-                            if (data.pos) entry.targetPos.set(data.pos[0], data.pos[1], data.pos[2]);
-                            if (data.quat) entry.targetQuat.set(data.quat[0], data.quat[1], data.quat[2], data.quat[3]);
-                            if (data.throttle !== undefined) entry.throttle = data.throttle;
-                        } else {
-                            // Initialize if missing (e.g. from currentPlayers bulk sync)
-                            if (data.pos && data.quat) {
-                                remoteTelemetry.set(data.id, {
-                                    pos: new Vector3(...data.pos),
-                                    quat: new Quaternion(...data.quat),
-                                    targetPos: new Vector3(...data.pos),
-                                    targetQuat: new Quaternion(...data.quat),
-                                    throttle: data.throttle || 0.5
-                                });
-                            }
-                        }
-                    });
                     break;
             }
         });

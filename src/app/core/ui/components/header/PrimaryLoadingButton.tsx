@@ -19,7 +19,8 @@ export const PrimaryLoadingButton: React.FC<PrimaryLoadingButtonProps> = ({
 }) => {
     const styles: Record<LaunchState, string> = {
         'not-ready': 'bg-slate-800/80 text-slate-600 border-slate-700 cursor-not-allowed',
-        'waiting-host': 'bg-amber-900/30 text-amber-500/70 border-amber-700/40 cursor-not-allowed',
+        // "waiting-host": Active blue, but faded (50% opacity) and not clickable
+        'waiting-host': 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border-blue-400/50 opacity-35 cursor-not-allowed',
         'ready': 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border-blue-400/50 hover:from-blue-500 hover:to-blue-400 hover:shadow-[0_0_25px_rgba(59,130,246,0.3)] active:scale-[0.97] cursor-pointer',
     };
 

@@ -40,18 +40,24 @@ const DEFAULT_TERRAIN_PARAMS: TerrainParams = {
 
 
 // Initial Pilot Setup
-const createPilot = (id: number, type: InputType, deviceId: string, gpIndex: number = -1): LocalPilot => ({
-    id,
-    sessionId: id, // Default to id
-    name: id === 0 ? "Maverick" : (id === 1 ? "Goose" : (id === 2 ? "Iceman" : "Viper")),
-    color: id === 0 ? "#3b82f6" : (id === 1 ? "#ef4444" : (id === 2 ? "#eab308" : "#22c55e")),
-    team: (id % 2) === 0 ? 1 : 2,
-    input: { type, deviceId, gamepadIndex: gpIndex },
-    airplane: 'interceptor',
-    ui: { cursorIndex: 0, status: 'selecting', viewRotation: { x: 0, y: 0 } },
-    telemetry: { altitude: 0, speed: 0, throttle: 0, pitch: 0, roll: 0 },
-    throttle: 0
-});
+const generateUniqueId = () => Math.random().toString(36).substring(2, 10).toUpperCase();
+
+const createPilot = (id: number, type: InputType, deviceId: string, gpIndex: number = -1): LocalPilot => {
+    const uniqueId = generateUniqueId();
+    return {
+        id,
+        sessionId: id, // Default to id
+        uniqueId,
+        name: uniqueId.slice(-5), // Last 5 chars
+        color: '#94a3b8', // Neutral Slate-400
+        team: (id % 2) === 0 ? 1 : 2,
+        input: { type, deviceId, gamepadIndex: gpIndex },
+        airplane: 'interceptor',
+        ui: { cursorIndex: 0, status: 'selecting', viewRotation: { x: 0, y: 0 } },
+        telemetry: { altitude: 0, speed: 0, throttle: 0, pitch: 0, roll: 0 },
+        throttle: 0
+    };
+};
 
 export const useStore = create<AppState>((set, get) => ({
     // --- GAME MODE & MISSION ---
@@ -192,6 +198,7 @@ export const useStore = create<AppState>((set, get) => ({
     terrainParams: DEFAULT_TERRAIN_PARAMS,
 
     generateNewTerrain: () => set({ terrainSeed: Math.floor(Math.random() * 100000) }),
+    setTerrainConfig: (seed, params) => set({ terrainSeed: seed, terrainParams: params }),
     setTerrainParam: (key, value) => set((state) => ({
         terrainParams: { ...state.terrainParams, [key]: value }
     })),

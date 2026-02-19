@@ -6,6 +6,7 @@ import { PlaySelectScreen } from './screens/PlaySelectScreen';
 import { LobbyScreen } from './screens/LobbyScreen';
 import { SessionState } from '../../../../engine/session/SessionState';
 import { useStore } from '../../../store/useStore';
+import { NetworkManager } from '../../../../engine/session/NetworkManager';
 
 const TABS: MainMenuScreen[] = ['squadron', 'operations', 'briefing'];
 
@@ -48,6 +49,8 @@ export const MainMenuContainer: React.FC = () => {
                 }
             } else if (action === 'ABORT') {
                 if (inLobby) {
+                    NetworkManager.leaveRoom();
+                    NetworkManager.disconnectGameServer();
                     useMainMenuStore.getState().setInLobby(false);
                     setScreen('operations');
                 }
