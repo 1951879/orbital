@@ -7,7 +7,7 @@ export type InputContext = 'GLOBAL' | 'MENU' | 'FLIGHT' | 'CUTSCENE';
 
 // A binding defines HOW a raw input maps to an Action
 export interface InputBinding {
-    deviceType: 'keyboard' | 'gamepad' | 'mouse';
+    deviceType: 'keyboard' | 'gamepad' | 'mouse' | 'touch';
 
     // Identifiers
     key?: string;      // For Keyboard (e.g. 'KeyW')
@@ -125,8 +125,11 @@ export class InputMapper {
             return 0;
         }
 
-        // Gamepad Axis
-        if (b.deviceType === 'gamepad' && this.assignedDevice && this.assignedDevice.startsWith('gamepad')) {
+        // Gamepad or Touch Axis
+        if ((b.deviceType === 'gamepad' || b.deviceType === 'touch') && this.assignedDevice) {
+            if (b.deviceType === 'gamepad' && !this.assignedDevice.startsWith('gamepad')) return 0;
+            if (b.deviceType === 'touch' && !this.assignedDevice.startsWith('touch')) return 0;
+
             const state = DeviceManager.getDeviceState(this.assignedDevice);
             if (!state) return 0;
 

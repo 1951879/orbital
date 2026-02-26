@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useStore } from '../../store/useStore';
+import { DeviceManager } from '../../../engine/input/DeviceManager';
 
 export const VirtualJoystick: React.FC<{ playerId: number }> = ({ playerId }) => {
   const pilotId = playerId - 1;
@@ -29,6 +30,8 @@ export const VirtualJoystick: React.FC<{ playerId: number }> = ({ playerId }) =>
     setIsActive(false);
     setKnobPos({ x: 0, y: 0 });
     setPilotJoystickState(pilotId, { x: 0, y: 0, active: false });
+    DeviceManager.setVirtualAxis(`touch:${pilotId}`, 0, 0);
+    DeviceManager.setVirtualAxis(`touch:${pilotId}`, 1, 0);
   };
 
   const updateJoystick = (clientX: number, clientY: number) => {
@@ -52,11 +55,15 @@ export const VirtualJoystick: React.FC<{ playerId: number }> = ({ playerId }) =>
     const newY = Math.sin(angle) * limitedDist;
 
     setKnobPos({ x: newX, y: newY });
+    const normX = newX / MAX_RADIUS;
+    const normY = newY / MAX_RADIUS;
     setPilotJoystickState(pilotId, {
-      x: newX / MAX_RADIUS,
-      y: newY / MAX_RADIUS,
+      x: normX,
+      y: normY,
       active: true
     });
+    DeviceManager.setVirtualAxis(`touch:${pilotId}`, 0, normX);
+    DeviceManager.setVirtualAxis(`touch:${pilotId}`, 1, normY);
   };
 
   return (

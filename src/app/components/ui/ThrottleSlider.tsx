@@ -1,6 +1,7 @@
 
 import React, { useRef } from 'react';
 import { useStore } from '../../store/useStore';
+import { DeviceManager } from '../../../engine/input/DeviceManager';
 
 export const ThrottleSlider: React.FC<{ playerId: number }> = ({ playerId }) => {
   const pilotId = playerId - 1;
@@ -26,6 +27,7 @@ export const ThrottleSlider: React.FC<{ playerId: number }> = ({ playerId }) => 
     }
 
     setPilotThrottle(pilotId, pct);
+    DeviceManager.setVirtualTrigger(`touch:${pilotId}`, 1, pct);
   };
 
   const onTouchStart = (e: React.TouchEvent) => {

@@ -15,7 +15,7 @@ import { GameHUD } from '../../core/ui/components/hud/GameHUD';
 import { NetworkManager, EntityStateUpdate } from '../../../engine/session/NetworkManager';
 
 import { PhysicsWorld } from '../../../engine/sim/PhysicsWorld';
-import { FREE_FLIGHT_GAMEPAD, FREE_FLIGHT_KB1, FREE_FLIGHT_KB2 } from './input/FreeFlightInput';
+import { FREE_FLIGHT_GAMEPAD, FREE_FLIGHT_KB1, FREE_FLIGHT_KB2, FREE_FLIGHT_TOUCH } from './input/FreeFlightInput';
 
 // --- SPAWN LOGIC ---
 const getSpawnPoint = (index: number) => {
@@ -193,6 +193,7 @@ export class FreeFlightModeLogic implements GameMode {
 
         // Register Input Profiles
         SessionState.registerDefaultProfile('gamepad', 'FLIGHT', FREE_FLIGHT_GAMEPAD);
+        SessionState.registerDefaultProfile('touch', 'FLIGHT', FREE_FLIGHT_TOUCH);
         // Register Keyboard Profiles
         SessionState.registerDefaultProfile('keyboard_wasd', 'FLIGHT', FREE_FLIGHT_KB1);
         SessionState.registerDefaultProfile('keyboard_arrows', 'FLIGHT', FREE_FLIGHT_KB2);
@@ -207,6 +208,8 @@ export class FreeFlightModeLogic implements GameMode {
                 p.input.loadProfile('FLIGHT', FREE_FLIGHT_KB1);
             } else if (p.deviceId === 'keyboard_arrows' || p.deviceId === 'kb2') {
                 p.input.loadProfile('FLIGHT', FREE_FLIGHT_KB2);
+            } else if (p.deviceId.startsWith('touch')) {
+                p.input.loadProfile('FLIGHT', FREE_FLIGHT_TOUCH);
             } else {
                 // Fallback
                 p.input.loadProfile('FLIGHT', FREE_FLIGHT_KB1);

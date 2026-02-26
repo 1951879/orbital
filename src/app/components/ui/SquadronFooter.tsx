@@ -48,9 +48,26 @@ export const SquadronFooter: React.FC<{ launchError?: string | null }> = ({ laun
         setContextMenu(null);
     };
 
-    const handleJoin = (slotIndex: number) => {
+    const handleJoin = (e: React.MouseEvent, slotIndex: number) => {
+        // Detect touch: check native event for TouchEvent or pointer type
+        const nativeEvt = e.nativeEvent as any;
+        const isTouch = !!nativeEvt && (
+            'touches' in nativeEvt ||
+            (nativeEvt instanceof PointerEvent && nativeEvt.pointerType === 'touch')
+        );
+
+        if (isTouch) {
+            const touchCount = localParty.filter(p => p.input.type === 'touch').length;
+            if (touchCount >= 2) {
+                console.warn("Max 2 Local Touch players allowed.");
+                return;
+            }
+            SessionState.addPlayer(`touch:${slotIndex}`, slotIndex);
+            return;
+        }
+
         // Limit: Max 2 Local Non-Gamepad Players (P1=WASD, P2=Arrows)
-        const nonGamepadPlayers = localParty.filter(p => !p.input.type.startsWith('gamepad'));
+        const nonGamepadPlayers = localParty.filter(p => !p.input.type.startsWith('gamepad') && p.input.type !== 'touch');
 
         if (nonGamepadPlayers.length >= 2) {
             console.warn("Max 2 Local Keyboard/Touch players allowed.");
@@ -200,7 +217,7 @@ export const SquadronFooter: React.FC<{ launchError?: string | null }> = ({ laun
                         return (
                             <button
                                 key={`empty-${i}`}
-                                onClick={() => handleJoin(i)}
+                                onClick={(e) => handleJoin(e, i)}
                                 className="flex-1 rounded border border-dashed border-slate-800 bg-slate-900/20 flex flex-col justify-center items-center opacity-40 hover:opacity-60 hover:bg-slate-800/40 transition-all cursor-pointer group active:scale-95"
                             >
                                 <span className="text-[8px] md:text-[10px] font-bold text-slate-700 group-hover:text-slate-500 uppercase">Slot {i + 1}</span>
