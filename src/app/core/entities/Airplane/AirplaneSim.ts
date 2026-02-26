@@ -63,6 +63,10 @@ export class AirplaneSim implements ISimObject {
     private _visualQuat = new Quaternion();
     private _euler = new Euler();
 
+    // Weapon State
+    private _lastFireTime = 0;
+    private _fireRate = 0.1; // 10 shots per second
+
 
     // State for smoothed "Heavy" flight
     private _inputRoll = 0;
@@ -141,6 +145,37 @@ export class AirplaneSim implements ISimObject {
 
         this.throttle = MathUtils.clamp(this.throttle, 0, 1);
 
+        // 0.5 Weapons
+        if (bFire) {
+            const now = Time.time;
+            if (now - this._lastFireTime > this._fireRate) {
+                this._lastFireTime = now;
+
+                // Spawn Projectiles
+                import('../../../../engine/sim/weapons/ProjectileManager').then(m => {
+                    const mgr = m.ProjectileManager.instance;
+                    if (mgr) {
+                        const projectileSpeed = this.currentSpeed + 200; // Fast laser
+
+                        const def = AIRPLANE_REGISTRY[this.type];
+                        const scale = def?.scale || 1.0;
+                        const hardpoints = def?.weaponHardpoints || [new Vector3(0, 0, 1)];
+
+                        // Combine Physics quaternion (heading/gravity) with Visual quaternion (bank/pitch)
+                        const combinedQuat = this.quaternion.clone().multiply(this._visualQuat);
+                        const forward = new Vector3(0, 0, 1).applyQuaternion(combinedQuat).normalize();
+
+                        for (const hp of hardpoints) {
+                            const offset = hp.clone().multiplyScalar(scale).applyQuaternion(combinedQuat);
+                            mgr.spawn(this.position.clone().add(offset), forward, projectileSpeed, this.playerId);
+                        }
+
+                        // Mild haptic feedback
+                        HapticManager.vibrate(10);
+                    }
+                });
+            }
+        }
 
         // 1. Calculate Target Speed
         const baseSpeed = tuning.Speed.baseSpeed.value;

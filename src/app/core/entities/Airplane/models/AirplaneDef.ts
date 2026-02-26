@@ -54,6 +54,8 @@ export interface AirplaneDef {
     scale: number;
     /** Hand-tuned collision hull points */
     collisionPoints: Vector3[];
+    /** Weapon firing origins (relative to unscaled model center) */
+    weaponHardpoints?: Vector3[];
     /** Audio synthesis config */
     audio: AudioConfig;
     /** Flight characteristics (optional, defaults to 1.0) */

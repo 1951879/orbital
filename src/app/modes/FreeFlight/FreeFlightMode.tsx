@@ -15,6 +15,8 @@ import { GameHUD } from '../../core/ui/components/hud/GameHUD';
 import { NetworkManager, EntityStateUpdate } from '../../../engine/session/NetworkManager';
 
 import { PhysicsWorld } from '../../../engine/sim/PhysicsWorld';
+import { ProjectileManager } from '../../../engine/sim/weapons/ProjectileManager';
+import { ProjectilesView } from '../../core/entities/Weapons/ProjectilesView';
 import { FREE_FLIGHT_GAMEPAD, FREE_FLIGHT_KB1, FREE_FLIGHT_KB2, FREE_FLIGHT_TOUCH } from './input/FreeFlightInput';
 
 // --- SPAWN LOGIC ---
@@ -86,6 +88,7 @@ const FreeFlightScene: React.FC<{ mode: FreeFlightModeLogic }> = ({ mode }) => {
         <>
             <SunLight />
             <BlueprintSphere isPaused={isPaused} />
+            <ProjectilesView />
 
             {/* Local players */}
             {sims.map(sim => (
@@ -172,6 +175,7 @@ export class FreeFlightModeLogic implements GameMode {
         this.sims.clear();
         this.cachedSims = [];
         this.pendingSpawns = [];
+        new ProjectileManager(); // Initialize singleton
 
         // Start Loading (if online)
         const { currentRoomId } = useStore.getState();
@@ -384,7 +388,9 @@ export class FreeFlightModeLogic implements GameMode {
             this.sims.forEach(sim => sim.update());
 
             // 4. Update Projectiles
-            useFreeFlightStore.getState().updateProjectiles(dt);
+            if (ProjectileManager.instance) {
+                ProjectileManager.instance.update();
+            }
 
             // 5. ONLINE: Send local entity state to game server
             if (NetworkManager.isGameConnected && NetworkManager.localEntityIds.length > 0) {
