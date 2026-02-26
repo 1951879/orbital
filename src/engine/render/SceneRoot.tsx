@@ -109,14 +109,7 @@ export const SceneRoot: React.FC<{
     return (
         <div className="absolute inset-0 bg-slate-950" style={{ touchAction: 'none' }}>
             <Canvas shadows camera={{ position: [0, 50, 100], fov: 60 }}>
-                {/* GLOBAL LIGHTING & ENV (Common to all modes?) */}
-                {/* Actually, Mode should probably handle its own Env if it wants different lighting */}
-                {/* But keeping generic stars/bg here is fine for now. */}
-                <color attach="background" args={['#0f172a']} />
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
-                <Stars radius={300} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
-                <Environment preset="city" />
+                {/* GLOBAL LIGHTING & ENV -> Moved to Mode (e.g. SunLight.tsx) */}
 
 
                 {/* RENDER ACTIVE MODE SCENE */}

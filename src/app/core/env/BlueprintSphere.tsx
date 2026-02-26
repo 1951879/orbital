@@ -6,7 +6,7 @@ import { Mesh, Color, SphereGeometry, ShaderMaterial, FrontSide, MeshStandardMat
 import { useStore } from '../../store/useStore';
 import { SimplexNoise, getTerrainElevation } from '../../../engine/utils/terrain';
 
-export const BlueprintSphere: React.FC = () => {
+export const BlueprintSphere: React.FC<{ isPaused?: boolean }> = ({ isPaused = false }) => {
   const terrainRef = useRef<Mesh>(null);
   const oceanRef = useRef<Mesh>(null);
   const atmosphereRef = useRef<Mesh>(null);
@@ -14,7 +14,6 @@ export const BlueprintSphere: React.FC = () => {
 
   const terrainSeed = useStore((state) => state.terrainSeed);
   const terrainParams = useStore((state) => state.terrainParams);
-  const isPaused = useStore((state) => state.isPaused);
   const isOnline = useStore((state) => state.isOnline); // Check online status
   const activeMenuTab = useStore((state) => state.activeMenuTab); // For rotation logic
   const isCameraTransitioning = useStore((state) => state.isCameraTransitioning);

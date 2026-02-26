@@ -15,6 +15,9 @@ export interface GameMode {
     // Logic Loop
     update: (dt: number) => void;
 
+    // Optional Layout Override (e.g. 'single' vs 'default')
+    getLayoutOverride?: () => string;
+
     // Lifecycle
     init: () => void;
     dispose: () => void;

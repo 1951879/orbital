@@ -1,13 +1,22 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Vector3 } from 'three';
-import { ThreeElements } from '@react-three/fiber';
+import { ThreeElements, useFrame } from '@react-three/fiber';
 import { JetExhaust } from '../../effects/JetExhaust';
 import { AirplaneDef, AirplaneModelProps } from './AirplaneDef';
 
 const Scout: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleRef, scale }) => {
    const effectiveThrottle = throttle ?? 0.5;
+
+   const engineRef = useRef<THREE.MeshStandardMaterial>(null);
+
+   useFrame(() => {
+      if (engineRef.current) {
+         const t = throttleRef?.current ?? effectiveThrottle;
+         engineRef.current.emissiveIntensity = t * 2.5;
+      }
+   });
 
    const colors = {
       main: '#e2e8f0',
@@ -84,6 +93,7 @@ const Scout: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleR
          <mesh position={[0, 0, -1.0]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.25, 0.15, 0.6, 12]} />
             <meshStandardMaterial
+               ref={engineRef}
                color="#2d3748"
                emissive={colors.highlight}
                emissiveIntensity={effectiveThrottle * 2.5}

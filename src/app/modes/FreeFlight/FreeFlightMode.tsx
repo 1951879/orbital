@@ -85,7 +85,7 @@ const FreeFlightScene: React.FC<{ mode: FreeFlightModeLogic }> = ({ mode }) => {
     return (
         <>
             <SunLight />
-            <BlueprintSphere />
+            <BlueprintSphere isPaused={isPaused} />
 
             {/* Local players */}
             {sims.map(sim => (
@@ -406,7 +406,7 @@ export class FreeFlightModeLogic implements GameMode {
                         };
 
                         if (shouldLog) {
-                            console.log('[FreeFlightMode] Sending update for entity:', update.entityId, 'Pos:', update.position);
+                            // console.log('[FreeFlightMode] Sending update for entity:', update.entityId, 'Pos:', update.position);
                         }
 
                         NetworkManager.sendStateUpdate(update);

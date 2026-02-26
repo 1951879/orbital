@@ -1,13 +1,23 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Vector3 } from 'three';
-import { ThreeElements } from '@react-three/fiber';
+import { ThreeElements, useFrame } from '@react-three/fiber';
 import { JetExhaust } from '../../effects/JetExhaust';
 import { AirplaneDef, AirplaneModelProps } from './AirplaneDef';
 
 const Raptor: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleRef, scale }) => {
     const effectiveThrottle = throttle ?? 0.5;
+
+    const engineRef = useRef<THREE.MeshStandardMaterial>(null);
+
+    useFrame(() => {
+        if (engineRef.current) {
+            // Use ref for 60fps update, fallback to static prop
+            const t = throttleRef?.current ?? effectiveThrottle;
+            engineRef.current.emissiveIntensity = t * 1.5;
+        }
+    });
 
     const colors = {
         main: '#15803d',
@@ -84,11 +94,11 @@ const Raptor: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttle
             <group position={[0, 0, -1.3]}>
                 <mesh position={[0.3, 0.15, 0]}>
                     <boxGeometry args={[0.4, 0.25, 0.5]} />
-                    <meshStandardMaterial color={colors.engine} emissive={colors.exhaust} emissiveIntensity={effectiveThrottle * 1.5} />
+                    <meshStandardMaterial ref={engineRef} color={colors.engine} emissive={colors.exhaust} emissiveIntensity={effectiveThrottle * 1.5} />
                 </mesh>
                 <mesh position={[-0.3, 0.15, 0]}>
                     <boxGeometry args={[0.4, 0.25, 0.5]} />
-                    <meshStandardMaterial color={colors.engine} emissive={colors.exhaust} emissiveIntensity={effectiveThrottle * 1.5} />
+                    <meshStandardMaterial ref={engineRef} color={colors.engine} emissive={colors.exhaust} emissiveIntensity={effectiveThrottle * 1.5} />
                 </mesh>
 
                 <group position={[0.3, 0.15, -0.2]}>

@@ -1,13 +1,23 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Vector3 } from 'three';
-import { ThreeElements } from '@react-three/fiber';
+import { ThreeElements, useFrame } from '@react-three/fiber';
 import { JetExhaust } from '../../effects/JetExhaust';
 import { AirplaneDef, AirplaneModelProps } from './AirplaneDef';
 
 const Interceptor: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, throttleRef, scale }) => {
   const effectiveThrottle = throttle ?? 0.5;
+
+  const engineRef = useRef<THREE.MeshStandardMaterial>(null);
+
+  useFrame(() => {
+    if (engineRef.current) {
+      // Use ref for 60fps update, fallback to static prop
+      const t = throttleRef?.current ?? effectiveThrottle;
+      engineRef.current.emissiveIntensity = t * 2.0;
+    }
+  });
 
   const colors = { main: '#0ea5e9', highlight: '#dc2626', engine: '#0f172a', canopy: '#fbbf24' };
 
@@ -48,6 +58,7 @@ const Interceptor: React.FC<AirplaneModelProps> = ({ playerId = 1, throttle, thr
       <mesh position={[0, 0, -1.15]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.3, 0.35, 0.5, 16]} />
         <meshStandardMaterial
+          ref={engineRef}
           color={colors.engine}
           emissive={colors.highlight}
           emissiveIntensity={effectiveThrottle * 2.0}
