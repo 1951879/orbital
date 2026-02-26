@@ -15,7 +15,7 @@ import {
     LobbyInfo,
     RemotePlayerInfo,
     InputType,
-
+    TouchConfig
 } from '../../types';
 
 // Non-reactive storage for high frequency updates
@@ -250,5 +250,13 @@ export const useStore = create<AppState>((set, get) => ({
     abortMission: () => set((state) => ({
         mission: 'main_menu',
         // isPaused handled by mode disposal
-    }))
+    })),
+
+    // --- TOUCH CONFIG ---
+    touchConfig: {
+        joystickSize: 1.0,
+    },
+    setTouchConfig: (config) => set((state) => ({
+        touchConfig: { ...state.touchConfig, ...config }
+    })),
 }));

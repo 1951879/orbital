@@ -6,13 +6,15 @@ export const VirtualJoystick: React.FC<{ playerId: number }> = ({ playerId }) =>
   const pilotId = playerId - 1;
   const setPilotJoystickState = useStore((state) => state.setPilotJoystickState);
   const invertPlayer2 = useStore((state) => state.invertPlayer2);
+  const touchConfig = useStore((state) => state.touchConfig);
   const containerRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
 
   const [knobPos, setKnobPos] = useState({ x: 0, y: 0 });
   const [isActive, setIsActive] = useState(false);
 
-  const MAX_RADIUS = 48;
+  const scale = touchConfig?.joystickSize || 1.0;
+  const MAX_RADIUS = 48 * scale;
   const isInverted = playerId === 2 && invertPlayer2;
 
   const handleStart = (clientX: number, clientY: number) => {
@@ -69,7 +71,12 @@ export const VirtualJoystick: React.FC<{ playerId: number }> = ({ playerId }) =>
   return (
     <div
       ref={containerRef}
-      className="relative w-28 h-28 bg-slate-800/40 backdrop-blur-sm rounded-full border border-slate-600/50 touch-none pointer-events-auto shadow-2xl"
+      className={`relative bg-slate-800/40 backdrop-blur-sm rounded-full border border-slate-600/50 touch-none pointer-events-auto shadow-2xl origin-center`}
+      style={{
+        width: `${112 * scale}px`, // 28 * 4px
+        height: `${112 * scale}px`,
+        // Optionally center it if the parent relies on absolute positioning
+      }}
       onTouchStart={(e) => {
         e.stopPropagation();
         if (e.targetTouches.length > 0) handleStart(e.targetTouches[0].clientX, e.targetTouches[0].clientY);
@@ -83,8 +90,10 @@ export const VirtualJoystick: React.FC<{ playerId: number }> = ({ playerId }) =>
       <div className="absolute top-1/2 left-1/2 w-1.5 h-1.5 bg-slate-500 rounded-full -translate-x-1/2 -translate-y-1/2" />
       <div
         ref={knobRef}
-        className="absolute top-1/2 left-1/2 w-12 h-12 bg-blue-500/80 rounded-full shadow-lg border border-blue-300/30"
+        className="absolute top-1/2 left-1/2 bg-blue-500/80 rounded-full shadow-lg border border-blue-300/30"
         style={{
+          width: `${48 * scale}px`,
+          height: `${48 * scale}px`,
           transform: `translate(calc(-50% + ${knobPos.x}px), calc(-50% + ${knobPos.y}px))`,
           transition: isActive ? 'none' : 'transform 0.2s ease-out'
         }}

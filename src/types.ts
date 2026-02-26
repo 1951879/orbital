@@ -18,6 +18,10 @@ export interface JoystickState {
   active: boolean;
 }
 
+export interface TouchConfig {
+  joystickSize: number; // Scale multiplier (default 1.0)
+}
+
 export interface FlightTelemetry {
   altitude: number;
   speed: number;
@@ -204,4 +208,8 @@ export interface AppState {
   setPilotCursor: (index: number, cursorIndex: number) => void;
   setPilotStatus: (index: number, status: PilotStatus) => void;
   abortMission: () => void;
+
+  // Touch UI Config
+  touchConfig: TouchConfig;
+  setTouchConfig: (config: Partial<TouchConfig>) => void;
 }
