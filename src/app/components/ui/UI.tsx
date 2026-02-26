@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { VirtualJoystick } from './VirtualJoystick';
 import { ThrottleSlider } from './ThrottleSlider';
+import { TouchFireButton } from './TouchFireButton';
 import { MenuOverlay } from './MenuOverlay';
 
 
@@ -106,14 +107,16 @@ export const UI: React.FC = () => {
                                                     <VirtualJoystick playerId={pilot.id + 1} />
                                                 </div>
                                                 <div
-                                                    className="absolute z-20 transition-all duration-300 pointer-events-auto"
+                                                    className="absolute z-20 transition-all duration-300 pointer-events-auto flex flex-row items-end gap-6"
                                                     style={{
                                                         ...controlsStyle,
                                                         right: isInverted ? 'auto' : '24px',
                                                         left: isInverted ? '24px' : 'auto'
                                                     }}
                                                 >
+                                                    {!isInverted && <TouchFireButton playerId={pilot.id + 1} />}
                                                     <ThrottleSlider playerId={pilot.id + 1} />
+                                                    {isInverted && <TouchFireButton playerId={pilot.id + 1} />}
                                                 </div>
                                             </>
                                         )}

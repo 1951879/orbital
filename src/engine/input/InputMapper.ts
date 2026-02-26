@@ -106,11 +106,14 @@ export class InputMapper {
             return b.key ? DeviceManager.isKeyPressed(b.key) : false;
         }
 
-        // Gamepad
-        if (b.deviceType === 'gamepad' && this.assignedDevice && this.assignedDevice.startsWith('gamepad')) {
+        // Gamepad or Touch
+        if ((b.deviceType === 'gamepad' || b.deviceType === 'touch') && this.assignedDevice) {
+            if (b.deviceType === 'gamepad' && !this.assignedDevice.startsWith('gamepad')) return false;
+            if (b.deviceType === 'touch' && !this.assignedDevice.startsWith('touch')) return false;
+
             const state = DeviceManager.getDeviceState(this.assignedDevice);
             if (!state || b.button === undefined) return false;
-            return state.buttons[b.button];
+            return !!state.buttons[b.button];
         }
 
         return false;
@@ -135,8 +138,8 @@ export class InputMapper {
 
 
             let raw = 0;
-            if (b.axis !== undefined) raw = state.axes[b.axis];
-            if (b.triggerIndex !== undefined) raw = state.triggers[b.triggerIndex];
+            if (b.axis !== undefined) raw = state.axes[b.axis] || 0;
+            if (b.triggerIndex !== undefined) raw = state.triggers[b.triggerIndex] || 0;
 
             // Apply Deadzone
             if (Math.abs(raw) < (b.deadzone || 0.1)) raw = 0;

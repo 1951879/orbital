@@ -39,6 +39,16 @@ export class DeviceManager {
         state.axes[axisIndex] = value;
     }
 
+    public static setVirtualButton(deviceId: DeviceID, buttonIndex: number, pressed: boolean) {
+        let state = this._devices.get(deviceId);
+        if (!state) {
+            state = { buttons: [], axes: [], triggers: [] };
+            this._devices.set(deviceId, state);
+            this.emitDeviceChange(deviceId, true);
+        }
+        state.buttons[buttonIndex] = pressed;
+    }
+
     public static setVirtualTrigger(deviceId: DeviceID, triggerIndex: number, value: number) {
         let state = this._devices.get(deviceId);
         if (!state) {

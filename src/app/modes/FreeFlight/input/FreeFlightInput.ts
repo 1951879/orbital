@@ -65,4 +65,5 @@ export const FREE_FLIGHT_TOUCH: InputProfile = {
     "ROLL": [{ deviceType: 'touch', axis: 0, invert: false, deadzone: 0.05 }],
     "YAW": [{ deviceType: 'touch', axis: 0, invert: false, deadzone: 0.05 }],
     "THROTTLE": [{ deviceType: 'touch', triggerIndex: 1, deadzone: 0.01 }],
+    "FIRE": [{ deviceType: 'touch', button: 0 }],
 };
