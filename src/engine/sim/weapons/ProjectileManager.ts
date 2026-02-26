@@ -47,13 +47,35 @@ export class ProjectileManager {
 
     public update() {
         const dt = Time.dt;
+        const gravity = 50.0; // Downward acceleration to create bullet drop
+
         for (const p of this.projectiles) {
             if (p.active) {
                 p.life -= dt;
                 if (p.life <= 0) {
                     p.active = false;
                 } else {
+                    const speed = p.velocity.length();
+                    const r = p.position.length();
+
+                    // 1. Follow planetary curvature (maintain angle relative to horizon)
+                    const up = p.position.clone().normalize();
+                    const axis = new Vector3().crossVectors(up, p.velocity);
+
+                    if (axis.lengthSq() > 0.0001) {
+                        axis.normalize();
+                        const angle = (speed * dt) / r;
+                        p.velocity.applyAxisAngle(axis, angle);
+                    }
+
+                    // 2. Apply ballistic drop (gravity)
+                    p.velocity.addScaledVector(up, -gravity * dt);
+
+                    // 3. Move
                     p.position.addScaledVector(p.velocity, dt);
+
+                    // 4. Orient visually
+                    p.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), p.velocity.clone().normalize());
                 }
             }
         }

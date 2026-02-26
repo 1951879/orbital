@@ -93,8 +93,8 @@ export default {
     new Vector3(-2.5, 0, -0.5),
   ],
   weaponHardpoints: [
-    new Vector3(2.5, 0, 0.5),  // Right Wing (+Z is forward physically)
-    new Vector3(-2.5, 0, 0.5), // Left Wing
+    new Vector3(2, 0, 5),  // Right Wing (+Z is forward physically)
+    new Vector3(-2, 0, 5), // Left Wing
   ],
   audio: {
     engineBaseFreq: 110, engineType: 'sawtooth', engineMix: 0.18,
