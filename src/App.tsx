@@ -4,6 +4,7 @@ import { SceneRoot } from './engine/render/SceneRoot';
 import { UI } from './app/components/ui/UI';
 import { FlightTuningMenu } from './app/components/ui/debug/FlightTuningMenu';
 import { FPSMeter } from './app/components/ui/debug/FPSMeter';
+import { IosInstallPrompt } from './app/components/ui/IosInstallPrompt';
 import { FreeFlightModeInstance } from './app/modes/FreeFlight/FreeFlightMode';
 import { MainMenuModeInstance } from './app/modes/MainMenu/MainMenuMode';
 import { GameMode } from './engine/mode/GameMode';
@@ -131,6 +132,7 @@ const App: React.FC = () => {
       {/* Flight Tuning Menu (High Z-Index, Pointer Events Auto) */}
       <FlightTuningMenu />
       <FPSMeter />
+      <IosInstallPrompt />
     </div>
   );
 };
